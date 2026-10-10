@@ -1,0 +1,21 @@
+# build artifacts
+deps/build/
+deps/usr/
+deps/work/
+deps/deps.jl
+deps/build.log
+
+# Docs build artifacts
+docs/build/
+docs/src/tutorials/
+
+# Default Julia ignores
+/Manifest.toml
+/docs/Manifest.toml
+
+# Local development files
+/AGENTS.md
+/private/
+/repro/
+/.codex/
+/.vscode/
