@@ -264,6 +264,13 @@ The following Julia packages and organizations may be useful for users
 interested in tomography, image reconstruction, phantoms, sinograms, and
 computational imaging. This list is not exhaustive.
 
+### Related packages from this porting effort
+
+- [Tigre.jl](https://github.com/hashimoto-koh/Tigre.jl) — unofficial Julia port of [TIGRE](https://github.com/CERN/TIGRE).
+- [TomoPhantom.jl](https://github.com/hashimoto-koh/TomoPhantom.jl) — unofficial Julia port of [TomoPhantom](https://github.com/dkazanc/tomophantom).
+
+### Other related packages
+
 - [JuliaImageRecon](https://github.com/JuliaImageRecon) — Julia packages for image reconstruction and related tools.
 - [Sinograms.jl](https://github.com/JuliaImageRecon/Sinograms.jl) — tools for sinograms, tomography, Radon transforms, and CT/CBCT geometry.
 - [ImagePhantoms.jl](https://github.com/JuliaImageRecon/ImagePhantoms.jl) — software phantoms and analytical Radon/X-ray transforms.
