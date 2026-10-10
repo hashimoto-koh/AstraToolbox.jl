@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorial 6: Computed Laminography · AstraToolbox.jl</title><meta name="title" content="Tutorial 6: Computed Laminography · AstraToolbox.jl"/><meta property="og:title" content="Tutorial 6: Computed Laminography · AstraToolbox.jl"/><meta property="twitter:title" content="Tutorial 6: Computed Laminography · AstraToolbox.jl"/><meta name="description" content="Documentation for AstraToolbox.jl."/><meta property="og:description" content="Documentation for AstraToolbox.jl."/><meta property="twitter:description" content="Documentation for AstraToolbox.jl."/><meta property="og:url" content="https://hashimoto-koh.github.io/AstraToolbox.jl/tutorials/06_conebeam_laminography/"/><meta property="twitter:url" content="https://hashimoto-koh.github.io/AstraToolbox.jl/tutorials/06_conebeam_laminography/"/><link rel="canonical" href="https://hashimoto-koh.github.io/AstraToolbox.jl/tutorials/06_conebeam_laminography/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">AstraToolbox.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../quickstart/">Quick Start</a></li><li><a class="tocitem" href="../../installation/">Installation</a></li><li><a class="tocitem" href="../../toolbox_contents/">Toolbox contents</a></li><li><a class="tocitem" href="../../data_objects/">Data Objects</a></li><li><span class="tocitem">Geometries</span><ul><li><a class="tocitem" href="../../geometries_2d/">2D Geometries</a></li><li><a class="tocitem" href="../../geometries_3d/">3D Geometries</a></li></ul></li><li><a class="tocitem" href="../../projectors/">Projectors</a></li><li><a class="tocitem" href="../../algorithms/">Algorithms</a></li><li><a class="tocitem" href="../../utilities/">Utilities</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../01_2d_parallel_basic/">Tutorial 1: 2D Parallel-Beam CT</a></li><li><a class="tocitem" href="../02_projector_and_adjoint/">Tutorial 2: Linear Operators &amp; Adjointness</a></li><li><a class="tocitem" href="../03_custom_iterative_reconstruction/">Tutorial 3: Custom FISTA Reconstruction</a></li><li><a class="tocitem" href="../04_3d_conebeam_fdk/">Tutorial 4: 3D Cone-Beam FDK</a></li><li><a class="tocitem" href="../05_3d_geometry_and_cone_vec/">Tutorial 5: 3D Vector Geometry &amp; Alignment</a></li><li class="is-active"><a class="tocitem" href>Tutorial 6: Computed Laminography</a><ul class="internal"><li><a class="tocitem" href="#Prerequisites"><span>Prerequisites</span></a></li><li><a class="tocitem" href="#1.-Introduction"><span>1. Introduction</span></a></li><li><a class="tocitem" href="#2.-Package-Loading-and-Environment-Setup"><span>2. Package Loading and Environment Setup</span></a></li><li><a class="tocitem" href="#3.-Function-to-Construct-Laminography-Geometry-Vectors"><span>3. Function to Construct Laminography Geometry Vectors</span></a></li><li><a class="tocitem" href="#4.-Visualizing-3D-Scanning-Trajectories-(0-vs-30-vs-60)"><span>4. Visualizing 3D Scanning Trajectories (0° vs 30° vs 60°)</span></a></li><li><a class="tocitem" href="#5.-Creating-a-Multi-layer-PCB-Phantom-and-Forward-Projection"><span>5. Creating a Multi-layer PCB Phantom and Forward Projection</span></a></li><li><a class="tocitem" href="#6.-3D-Iterative-Reconstruction-with-SIRT-(SIRT3D)"><span>6. 3D Iterative Reconstruction with SIRT (SIRT3D)</span></a></li><li><a class="tocitem" href="#7.-Evaluating-Layer-Separation-and-Missing-Cone-Artifacts"><span>7. Evaluating Layer Separation and Missing-Cone Artifacts</span></a></li></ul></li><li><a class="tocitem" href="../07_sampling_and_accuracy/">Tutorial 7: Spatial Sampling &amp; Accuracy</a></li><li><a class="tocitem" href="../08_limited_angle_and_sparse_view/">Tutorial 8: Limited-Angle &amp; Sparse-View CT</a></li><li><a class="tocitem" href="../09_large_scale_and_gpu/">Tutorial 9: GPU Memory &amp; Large Scale</a></li></ul></li><li><a class="tocitem" href="../../demos/">Interactive Demonstrations</a></li><li><a class="tocitem" href="../../misc/">Miscellaneous</a></li><li><a class="tocitem" href="../../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Tutorial 6: Computed Laminography</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Tutorial 6: Computed Laminography</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/hashimoto-koh/AstraToolbox.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/hashimoto-koh/AstraToolbox.jl/blob/master/docs/src/tutorials/06_conebeam_laminography.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Tutorial-6:-Computed-Laminography-with-Tilted-Rotation-Axis"><a class="docs-heading-anchor" href="#Tutorial-6:-Computed-Laminography-with-Tilted-Rotation-Axis">Tutorial 6: Computed Laminography with Tilted Rotation Axis</a><a id="Tutorial-6:-Computed-Laminography-with-Tilted-Rotation-Axis-1"></a><a class="docs-heading-anchor-permalink" href="#Tutorial-6:-Computed-Laminography-with-Tilted-Rotation-Axis" title="Permalink"></a></h1><p>Non-Destructive Inspection of Planar Printed Circuit Boards (PCBs) and 3D Trajectory Modeling.</p><h2 id="Prerequisites"><a class="docs-heading-anchor" href="#Prerequisites">Prerequisites</a><a id="Prerequisites-1"></a><a class="docs-heading-anchor-permalink" href="#Prerequisites" title="Permalink"></a></h2><p>This tutorial uses <strong>Makie</strong> (recommended backend: <strong>CairoMakie</strong>) for visualization. If <code>CairoMakie</code> is not installed in your environment, add it by running <code>using Pkg; Pkg.add(&quot;CairoMakie&quot;)</code>.</p><h2 id="1.-Introduction"><a class="docs-heading-anchor" href="#1.-Introduction">1. Introduction</a><a id="1.-Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Introduction" title="Permalink"></a></h2><p>In flat, extended objects such as Printed Circuit Boards (PCBs) and semiconductor packages, standard 360° rotational CT is impractical because X-rays must traverse prohibitive material thicknesses along edge-on directions. <strong>Computed Laminography (CL)</strong> solves this by tilting the rotation axis (e.g. by 30° to 60°), keeping X-ray paths short and uniform across all projection angles.</p><p>Because the rotation axis is inclined, analytical FBP/FDK fails. However, ASTRA&#39;s <strong>3D Vector Geometry (<code>ConeVec3DGeometry</code>)</strong> and <strong>3D Iterative Reconstruction (<code>SIRT3D</code>)</strong> model and reconstruct laminography data naturally.</p><h3 id="Topics-covered-in-this-notebook:"><a class="docs-heading-anchor" href="#Topics-covered-in-this-notebook:">Topics covered in this notebook:</a><a id="Topics-covered-in-this-notebook:-1"></a><a class="docs-heading-anchor-permalink" href="#Topics-covered-in-this-notebook:" title="Permalink"></a></h3><ol><li>Formulating 3D laminography trajectory vectors.</li><li>Visualizing 3D cone-beam trajectories at various tilt angles (0°, 30°, 60°).</li><li>Generating a multi-layer planar PCB phantom.</li><li>3D iterative reconstruction using <code>SIRT3DMethod</code> with CUDA.</li><li>Evaluating layer slice separation and missing-cone artifacts.</li></ol><h2 id="2.-Package-Loading-and-Environment-Setup"><a class="docs-heading-anchor" href="#2.-Package-Loading-and-Environment-Setup">2. Package Loading and Environment Setup</a><a id="2.-Package-Loading-and-Environment-Setup-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Package-Loading-and-Environment-Setup" title="Permalink"></a></h2><pre><code class="language-julia hljs">using AstraToolbox
+using CairoMakie
+using LinearAlgebra
+
+println(&quot;Has CUDA available: &quot;, has_cuda())</code></pre><h2 id="3.-Function-to-Construct-Laminography-Geometry-Vectors"><a class="docs-heading-anchor" href="#3.-Function-to-Construct-Laminography-Geometry-Vectors">3. Function to Construct Laminography Geometry Vectors</a><a id="3.-Function-to-Construct-Laminography-Geometry-Vectors-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Function-to-Construct-Laminography-Geometry-Vectors" title="Permalink"></a></h2><p>We construct a 12-element vector geometry where the rotation axis is tilted by angle <span>$\theta$</span> relative to the Z-axis.</p><pre><code class="language-julia hljs">function build_laminography_geometry(num_angles, tilt_deg, sod, odd; det_u = 100, det_v = 100)
+    angles = Float32.(range(0, 2pi, length = num_angles))
+    theta = Float32(deg2rad(tilt_deg))
+    
+    vectors = zeros(Float32, 12, num_angles)
+    for (i, phi) in enumerate(angles)
+        # Source coordinates: tilted circular orbit
+        # Orbit normal n = (sin(theta), 0, cos(theta))
+        sx = -sod * sin(phi)
+        sy =  sod * cos(phi) * cos(theta)
+        sz = -sod * cos(phi) * sin(theta)
+        
+        # Detector center coordinates
+        dx =  odd * sin(phi)
+        dy = -odd * cos(phi) * cos(theta)
+        dz =  odd * cos(phi) * sin(theta)
+        
+        # Detector orientation vectors (u, v)
+        ux = cos(phi)
+        uy = sin(phi) * cos(theta)
+        uz = -sin(phi) * sin(theta)
+        
+        vx = 0.0f0
+        vy = sin(theta)
+        vz = cos(theta)
+        
+        vectors[:, i] = [sx, sy, sz, dx, dy, dz, ux, uy, uz, vx, vy, vz]
+    end
+    return ConeVec3DGeometry(vectors, det_u, det_v)
+end
+
+println(&quot;Laminography geometry builder defined.&quot;)</code></pre><h2 id="4.-Visualizing-3D-Scanning-Trajectories-(0-vs-30-vs-60)"><a class="docs-heading-anchor" href="#4.-Visualizing-3D-Scanning-Trajectories-(0-vs-30-vs-60)">4. Visualizing 3D Scanning Trajectories (0° vs 30° vs 60°)</a><a id="4.-Visualizing-3D-Scanning-Trajectories-(0-vs-30-vs-60)-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Visualizing-3D-Scanning-Trajectories-(0-vs-30-vs-60)" title="Permalink"></a></h2><p>Visualize how tilting the axis rotates the source and detector planes in 3D space.</p><pre><code class="language-julia hljs">geom_0  = build_laminography_geometry(72, 0,  800.0f0, 400.0f0)
+geom_30 = build_laminography_geometry(72, 30, 800.0f0, 400.0f0)
+geom_60 = build_laminography_geometry(72, 60, 800.0f0, 400.0f0)
+
+fig = Figure(size = (900, 350))
+
+for (idx, (geom, title_str)) in enumerate([(geom_0, &quot;Standard CT (Tilt = 0°)&quot;),
+                                          (geom_30, &quot;Laminography (Tilt = 30°)&quot;),
+                                          (geom_60, &quot;Laminography (Tilt = 60°)&quot;)])
+    ax = Axis3(fig[1, idx], title = title_str, xlabel = &quot;X&quot;, ylabel = &quot;Y&quot;, zlabel = &quot;Z&quot;)
+    src = geom.vectors[1:3, :]
+    det = geom.vectors[4:6, :]
+    lines!(ax, src[1, :], src[2, :], src[3, :], color = :red, linewidth = 2, label = &quot;Source&quot;)
+    lines!(ax, det[1, :], det[2, :], det[3, :], color = :blue, linewidth = 2, label = &quot;Detector&quot;)
+    scatter!(ax, [0.0], [0.0], [0.0], color = :black, markersize = 8)
+end
+fig</code></pre><p><img src="../../assets/tutorials/06_trajectories.png" alt="Laminography Trajectories at 0°, 30°, 60° Tilt"/></p><h2 id="5.-Creating-a-Multi-layer-PCB-Phantom-and-Forward-Projection"><a class="docs-heading-anchor" href="#5.-Creating-a-Multi-layer-PCB-Phantom-and-Forward-Projection">5. Creating a Multi-layer PCB Phantom and Forward Projection</a><a id="5.-Creating-a-Multi-layer-PCB-Phantom-and-Forward-Projection-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Creating-a-Multi-layer-PCB-Phantom-and-Forward-Projection" title="Permalink"></a></h2><p>Create a flat 3D phantom with distinct geometric patterns across 3 separate Z-layers.</p><pre><code class="language-julia hljs">nx, ny, nz = 80, 80, 80
+pcb_phantom = zeros(Float32, nx, ny, nz)
+
+# Layer 1 (Bottom, z = 25): Circular pads
+for ix in 20:4:60, iy in 20:4:60
+    if (ix-40)^2 + (iy-40)^2 &lt; 30^2
+        pcb_phantom[ix:ix+1, iy:iy+1, 25:27] .= 1.0f0
+    end
+end
+
+# Layer 2 (Middle, z = 40): Cross traces
+pcb_phantom[15:65, 38:42, 39:41] .= 1.5f0
+pcb_phantom[38:42, 15:65, 39:41] .= 1.5f0
+
+# Layer 3 (Top, z = 55): Square IC chip
+pcb_phantom[30:50, 30:50, 54:56] .= 2.0f0
+
+println(&quot;Multi-layer PCB phantom generated. Nonzero elements: &quot;, count(&gt;(0), pcb_phantom))
+
+# Forward projection with 45° tilted laminography geometry
+geom_cl = build_laminography_geometry(60, 45, 600.0f0, 300.0f0; det_u = 96, det_v = 96)
+sino_cl = project(pcb_phantom, geom_cl; backend = has_cuda() ? cuda() : cpu())
+
+println(&quot;Laminography projection finished! Sinogram size: &quot;, size(sino_cl))</code></pre><h2 id="6.-3D-Iterative-Reconstruction-with-SIRT-(SIRT3D)"><a class="docs-heading-anchor" href="#6.-3D-Iterative-Reconstruction-with-SIRT-(SIRT3D)">6. 3D Iterative Reconstruction with SIRT (SIRT3D)</a><a id="6.-3D-Iterative-Reconstruction-with-SIRT-(SIRT3D)-1"></a><a class="docs-heading-anchor-permalink" href="#6.-3D-Iterative-Reconstruction-with-SIRT-(SIRT3D)" title="Permalink"></a></h2><p>We reconstruct the tilted laminography data using 3D SIRT with non-negativity constraints.</p><pre><code class="language-julia hljs">if has_cuda()
+    # SIRT3D reconstruction (35 iterations)
+    rec_cl = reconstruct(
+        sino_cl,
+        geom_cl,
+        SIRT3DMethod(iterations = 35, min_constraint = 0.0f0);
+        volume_size = (nx, ny, nz),
+        backend = cuda()
+    )
+    println(&quot;3D Laminography SIRT reconstruction finished!&quot;)
+else
+    println(&quot;CUDA is not available. Skipping 3D reconstruction.&quot;)
+end</code></pre><h2 id="7.-Evaluating-Layer-Separation-and-Missing-Cone-Artifacts"><a class="docs-heading-anchor" href="#7.-Evaluating-Layer-Separation-and-Missing-Cone-Artifacts">7. Evaluating Layer Separation and Missing-Cone Artifacts</a><a id="7.-Evaluating-Layer-Separation-and-Missing-Cone-Artifacts-1"></a><a class="docs-heading-anchor-permalink" href="#7.-Evaluating-Layer-Separation-and-Missing-Cone-Artifacts" title="Permalink"></a></h2><p>Inspect each reconstructed layer slice (Z = 26, Z = 40, Z = 55) to verify layer separation.</p><pre><code class="language-julia hljs">if has_cuda()
+    fig = Figure(size = (900, 600))
+
+    # Ground Truth layers
+    ax1 = Axis(fig[1, 1], title = &quot;GT: Layer 1 (Pads, Z=26)&quot;, aspect = DataAspect())
+    heatmap!(ax1, pcb_phantom[:, :, 26], colormap = :viridis)
+
+    ax2 = Axis(fig[1, 2], title = &quot;GT: Layer 2 (Traces, Z=40)&quot;, aspect = DataAspect())
+    heatmap!(ax2, pcb_phantom[:, :, 40], colormap = :viridis)
+
+    ax3 = Axis(fig[1, 3], title = &quot;GT: Layer 3 (Chip, Z=55)&quot;, aspect = DataAspect())
+    heatmap!(ax3, pcb_phantom[:, :, 55], colormap = :viridis)
+
+    # Reconstructed layers
+    ax4 = Axis(fig[2, 1], title = &quot;CL Recon: Layer 1 (Z=26)&quot;, aspect = DataAspect())
+    heatmap!(ax4, rec_cl[:, :, 26], colormap = :viridis)
+
+    ax5 = Axis(fig[2, 2], title = &quot;CL Recon: Layer 2 (Z=40)&quot;, aspect = DataAspect())
+    heatmap!(ax5, rec_cl[:, :, 40], colormap = :viridis)
+
+    ax6 = Axis(fig[2, 3], title = &quot;CL Recon: Layer 3 (Z=55)&quot;, aspect = DataAspect())
+    heatmap!(ax6, rec_cl[:, :, 55], colormap = :viridis)
+
+    fig
+end</code></pre><p><img src="../../assets/tutorials/06_layers.png" alt="PCB Reconstructed Layers with SIRT3D"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../05_3d_geometry_and_cone_vec/">« Tutorial 5: 3D Vector Geometry &amp; Alignment</a><a class="docs-footer-nextpage" href="../07_sampling_and_accuracy/">Tutorial 7: Spatial Sampling &amp; Accuracy »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Saturday 10 October 2026 09:09">Saturday 10 October 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

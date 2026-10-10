@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorial 3: Custom FISTA Reconstruction · AstraToolbox.jl</title><meta name="title" content="Tutorial 3: Custom FISTA Reconstruction · AstraToolbox.jl"/><meta property="og:title" content="Tutorial 3: Custom FISTA Reconstruction · AstraToolbox.jl"/><meta property="twitter:title" content="Tutorial 3: Custom FISTA Reconstruction · AstraToolbox.jl"/><meta name="description" content="Documentation for AstraToolbox.jl."/><meta property="og:description" content="Documentation for AstraToolbox.jl."/><meta property="twitter:description" content="Documentation for AstraToolbox.jl."/><meta property="og:url" content="https://hashimoto-koh.github.io/AstraToolbox.jl/tutorials/03_custom_iterative_reconstruction/"/><meta property="twitter:url" content="https://hashimoto-koh.github.io/AstraToolbox.jl/tutorials/03_custom_iterative_reconstruction/"/><link rel="canonical" href="https://hashimoto-koh.github.io/AstraToolbox.jl/tutorials/03_custom_iterative_reconstruction/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">AstraToolbox.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../quickstart/">Quick Start</a></li><li><a class="tocitem" href="../../installation/">Installation</a></li><li><a class="tocitem" href="../../toolbox_contents/">Toolbox contents</a></li><li><a class="tocitem" href="../../data_objects/">Data Objects</a></li><li><span class="tocitem">Geometries</span><ul><li><a class="tocitem" href="../../geometries_2d/">2D Geometries</a></li><li><a class="tocitem" href="../../geometries_3d/">3D Geometries</a></li></ul></li><li><a class="tocitem" href="../../projectors/">Projectors</a></li><li><a class="tocitem" href="../../algorithms/">Algorithms</a></li><li><a class="tocitem" href="../../utilities/">Utilities</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../01_2d_parallel_basic/">Tutorial 1: 2D Parallel-Beam CT</a></li><li><a class="tocitem" href="../02_projector_and_adjoint/">Tutorial 2: Linear Operators &amp; Adjointness</a></li><li class="is-active"><a class="tocitem" href>Tutorial 3: Custom FISTA Reconstruction</a><ul class="internal"><li><a class="tocitem" href="#Prerequisites"><span>Prerequisites</span></a></li><li><a class="tocitem" href="#1.-Introduction"><span>1. Introduction</span></a></li><li><a class="tocitem" href="#2.-Package-Loading-and-Environment-Setup"><span>2. Package Loading and Environment Setup</span></a></li><li><a class="tocitem" href="#3.-Generating-Experimental-Data-and-Adding-Noise"><span>3. Generating Experimental Data and Adding Noise</span></a></li><li><a class="tocitem" href="#4.-Setting-up-Linear-Operator-and-Lipschitz-Constant"><span>4. Setting up Linear Operator and Lipschitz Constant</span></a></li><li><a class="tocitem" href="#5.-Custom-Algorithm-1:-Non-Negative-Landweber-Iteration"><span>5. Custom Algorithm 1: Non-Negative Landweber Iteration</span></a></li><li><a class="tocitem" href="#6.-Custom-Algorithm-2:-FISTA-with-Soft-Thresholding"><span>6. Custom Algorithm 2: FISTA with Soft-Thresholding</span></a></li><li><a class="tocitem" href="#7.-Comparison-of-Convergence-Rates"><span>7. Comparison of Convergence Rates</span></a></li><li><a class="tocitem" href="#8.-Visual-Comparison-of-Reconstructed-Images"><span>8. Visual Comparison of Reconstructed Images</span></a></li></ul></li><li><a class="tocitem" href="../04_3d_conebeam_fdk/">Tutorial 4: 3D Cone-Beam FDK</a></li><li><a class="tocitem" href="../05_3d_geometry_and_cone_vec/">Tutorial 5: 3D Vector Geometry &amp; Alignment</a></li><li><a class="tocitem" href="../06_conebeam_laminography/">Tutorial 6: Computed Laminography</a></li><li><a class="tocitem" href="../07_sampling_and_accuracy/">Tutorial 7: Spatial Sampling &amp; Accuracy</a></li><li><a class="tocitem" href="../08_limited_angle_and_sparse_view/">Tutorial 8: Limited-Angle &amp; Sparse-View CT</a></li><li><a class="tocitem" href="../09_large_scale_and_gpu/">Tutorial 9: GPU Memory &amp; Large Scale</a></li></ul></li><li><a class="tocitem" href="../../demos/">Interactive Demonstrations</a></li><li><a class="tocitem" href="../../misc/">Miscellaneous</a></li><li><a class="tocitem" href="../../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Tutorial 3: Custom FISTA Reconstruction</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Tutorial 3: Custom FISTA Reconstruction</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/hashimoto-koh/AstraToolbox.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/hashimoto-koh/AstraToolbox.jl/blob/master/docs/src/tutorials/03_custom_iterative_reconstruction.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Tutorial-3:-Custom-FISTA-Iterative-Reconstruction-with-ASTRA-Projectors"><a class="docs-heading-anchor" href="#Tutorial-3:-Custom-FISTA-Iterative-Reconstruction-with-ASTRA-Projectors">Tutorial 3: Custom FISTA Iterative Reconstruction with ASTRA Projectors</a><a id="Tutorial-3:-Custom-FISTA-Iterative-Reconstruction-with-ASTRA-Projectors-1"></a><a class="docs-heading-anchor-permalink" href="#Tutorial-3:-Custom-FISTA-Iterative-Reconstruction-with-ASTRA-Projectors" title="Permalink"></a></h1><p>Non-negative Landweber and FISTA with TV / Soft-Thresholding Regularization.</p><h2 id="Prerequisites"><a class="docs-heading-anchor" href="#Prerequisites">Prerequisites</a><a id="Prerequisites-1"></a><a class="docs-heading-anchor-permalink" href="#Prerequisites" title="Permalink"></a></h2><p>This tutorial uses <strong>Makie</strong> (recommended backend: <strong>CairoMakie</strong>) for visualization. If <code>CairoMakie</code> is not installed in your environment, add it by running <code>using Pkg; Pkg.add(&quot;CairoMakie&quot;)</code>.</p><h2 id="1.-Introduction"><a class="docs-heading-anchor" href="#1.-Introduction">1. Introduction</a><a id="1.-Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Introduction" title="Permalink"></a></h2><p>While ASTRA provides standard built-in iterative algorithms (SIRT, CGLS, EM), scientific research often requires custom objective functions or domain-specific regularization:</p><ul><li>Total Variation (TV) minimization</li><li>Wavelet / framelet <span>$\ell_1$</span> sparsity priors</li><li>Non-negativity and box constraints</li></ul><p>By treating <code>AstraProjectorMap</code> as a linear operator <span>$A$</span>, you can implement state-of-the-art proximal gradient algorithms like <strong>FISTA</strong> (Fast Iterative Shrinkage-Thresholding Algorithm) in just a few lines of clean Julia code.</p><h3 id="Topics-covered-in-this-notebook:"><a class="docs-heading-anchor" href="#Topics-covered-in-this-notebook:">Topics covered in this notebook:</a><a id="Topics-covered-in-this-notebook:-1"></a><a class="docs-heading-anchor-permalink" href="#Topics-covered-in-this-notebook:" title="Permalink"></a></h3><ol><li>Adding Gaussian noise to sinogram data (<span>$b = Ax + \epsilon$</span>).</li><li>Setting up the linear operator <span>$A$</span> and computing its Lipschitz constant <span>$L$</span>.</li><li>Implementing non-negative gradient descent (Landweber iteration).</li><li>Implementing accelerated proximal gradient (FISTA) with soft thresholding.</li><li>Comparing convergence histories and visual reconstruction quality.</li></ol><h2 id="2.-Package-Loading-and-Environment-Setup"><a class="docs-heading-anchor" href="#2.-Package-Loading-and-Environment-Setup">2. Package Loading and Environment Setup</a><a id="2.-Package-Loading-and-Environment-Setup-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Package-Loading-and-Environment-Setup" title="Permalink"></a></h2><pre><code class="language-julia hljs">using AstraToolbox
+using CairoMakie
+using LinearAlgebra
+using Random
+
+Random.seed!(1234)
+println(&quot;Ready for Custom Iterative Solvers!&quot;)</code></pre><h2 id="3.-Generating-Experimental-Data-and-Adding-Noise"><a class="docs-heading-anchor" href="#3.-Generating-Experimental-Data-and-Adding-Noise">3. Generating Experimental Data and Adding Noise</a><a id="3.-Generating-Experimental-Data-and-Adding-Noise-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Generating-Experimental-Data-and-Adding-Noise" title="Permalink"></a></h2><p>Create a 128×128 Shepp-Logan phantom and project it using a 60-angle parallel-beam geometry, adding 5% Gaussian noise to simulate realistic detector readings.</p><pre><code class="language-julia hljs">nx, ny = 128, 128
+vol_geom = VolumeGeometry2D(nx, ny)
+x_true = shepp_logan(nx)
+
+# 60 angles (Sparse-view setup)
+angles = Float32.(range(0, pi, length = 60))
+proj_geom = Parallel2DGeometry(angles, 128, 1.0f0)
+
+# Noise-free sinogram
+b_clean = project(x_true, proj_geom)
+
+# Add 5% Gaussian noise
+sigma_noise = 0.05f0 * maximum(b_clean)
+b_noisy = b_clean .+ sigma_noise .* randn(Float32, size(b_clean))
+# Clamp negative readings to zero
+b_noisy .= max.(0.0f0, b_noisy)
+
+fig = Figure(size = (700, 320))
+ax1 = Axis(fig[1, 1], title = &quot;Ground Truth Phantom&quot;, aspect = DataAspect())
+heatmap!(ax1, x_true, colormap = :viridis)
+
+ax2 = Axis(fig[1, 2], title = &quot;Noisy Sinogram (60 angles, 5% noise)&quot;)
+heatmap!(ax2, b_noisy, colormap = :plasma)
+fig</code></pre><p><img src="../../assets/tutorials/03_noisy_data.png" alt="Ground Truth and Noisy Sinogram"/></p><h2 id="4.-Setting-up-Linear-Operator-and-Lipschitz-Constant"><a class="docs-heading-anchor" href="#4.-Setting-up-Linear-Operator-and-Lipschitz-Constant">4. Setting up Linear Operator and Lipschitz Constant</a><a id="4.-Setting-up-Linear-Operator-and-Lipschitz-Constant-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Setting-up-Linear-Operator-and-Lipschitz-Constant" title="Permalink"></a></h2><p>We instantiate <code>AstraProjectorMap</code> and compute the Lipschitz constant <span>$L = \|A\|_2^2$</span> to determine the optimal step size <span>$\alpha = 1/L$</span>.</p><pre><code class="language-julia hljs">A = AstraProjectorMap(proj_geom, vol_geom; backend = has_cuda() ? cuda() : cpu())
+
+# Estimate Lipschitz constant L via power iteration
+function compute_lipschitz(A; iters = 20)
+    v = rand(Float32, size(A, 2))
+    v ./= norm(v)
+    for _ in 1:iters
+        v = A&#39; * (A * v)
+        v ./= norm(v)
+    end
+    return norm(A * v)^2
+end
+
+L = compute_lipschitz(A)
+step_size = 1.0f0 / L
+println(&quot;Operator Lipschitz constant L: &quot;, L)
+println(&quot;Optimal step size (1/L): &quot;, step_size)</code></pre><h2 id="5.-Custom-Algorithm-1:-Non-Negative-Landweber-Iteration"><a class="docs-heading-anchor" href="#5.-Custom-Algorithm-1:-Non-Negative-Landweber-Iteration">5. Custom Algorithm 1: Non-Negative Landweber Iteration</a><a id="5.-Custom-Algorithm-1:-Non-Negative-Landweber-Iteration-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Custom-Algorithm-1:-Non-Negative-Landweber-Iteration" title="Permalink"></a></h2><p>Minimizes <span>$\frac{1}{2}\|Ax - b\|^2$</span> subject to <span>$x \ge 0$</span>: <span>$x^{k+1} = \max\left(0, x^k - \alpha A^T (Ax^k - b)\right)$</span></p><pre><code class="language-julia hljs">function solve_landweber(A, b, step_size; max_iter = 60)
+    b_vec = vec(b)
+    x = zeros(Float32, size(A, 2))
+    residuals = Float32[]
+    
+    for iter in 1:max_iter
+        # Residual r = Ax - b
+        r = A * x - b_vec
+        push!(residuals, norm(r))
+        
+        # Gradient step: x &lt;- x - step_size * A&#39; * r
+        grad = A&#39; * r
+        x .-= step_size .* grad
+        
+        # Non-negativity projection
+        x .= max.(0.0f0, x)
+    end
+    return x, residuals
+end
+
+x_landweber_vec, res_landweber = solve_landweber(A, b_noisy, step_size; max_iter = 60)
+println(&quot;Landweber solver finished 60 iterations.&quot;)</code></pre><h2 id="6.-Custom-Algorithm-2:-FISTA-with-Soft-Thresholding"><a class="docs-heading-anchor" href="#6.-Custom-Algorithm-2:-FISTA-with-Soft-Thresholding">6. Custom Algorithm 2: FISTA with Soft-Thresholding</a><a id="6.-Custom-Algorithm-2:-FISTA-with-Soft-Thresholding-1"></a><a class="docs-heading-anchor-permalink" href="#6.-Custom-Algorithm-2:-FISTA-with-Soft-Thresholding" title="Permalink"></a></h2><p>FISTA (Beck &amp; Teboulle, 2009) introduces Nesterov acceleration and proximal shrinkage: <span>$y^{k+1} = \operatorname{prox}_{\lambda}(x^k - \alpha A^T(Ax^k - b))$</span> <span>$t_{k+1} = \frac{1 + \sqrt{1 + 4 t_k^2}}{2}, \qquad x^{k+1} = y^{k+1} + \frac{t_k - 1}{t_{k+1}} (y^{k+1} - y^k)$</span></p><pre><code class="language-julia hljs">function solve_fista(A, b, step_size; max_iter = 60, lambda = 0.002f0)
+    b_vec = vec(b)
+    x = zeros(Float32, size(A, 2))
+    y = copy(x)
+    t = 1.0f0
+    residuals = Float32[]
+    
+    for iter in 1:max_iter
+        # Gradient evaluated at y
+        r = A * y - b_vec
+        push!(residuals, norm(r))
+        
+        grad = A&#39; * r
+        
+        # Proximal update (Soft thresholding + Non-negativity)
+        x_next = y .- step_size .* grad
+        threshold = lambda * step_size
+        x_next .= max.(0.0f0, x_next .- threshold)
+        
+        # Nesterov momentum update
+        t_next = (1.0f0 + sqrt(1.0f0 + 4.0f0 * t^2)) / 2.0f0
+        beta = (t - 1.0f0) / t_next
+        y = x_next .+ beta .* (x_next .- x)
+        
+        x = x_next
+        t = t_next
+    end
+    return x, residuals
+end
+
+x_fista_vec, res_fista = solve_fista(A, b_noisy, step_size; max_iter = 60, lambda = 0.005f0)
+println(&quot;FISTA solver finished 60 iterations.&quot;)</code></pre><h2 id="7.-Comparison-of-Convergence-Rates"><a class="docs-heading-anchor" href="#7.-Comparison-of-Convergence-Rates">7. Comparison of Convergence Rates</a><a id="7.-Comparison-of-Convergence-Rates-1"></a><a class="docs-heading-anchor-permalink" href="#7.-Comparison-of-Convergence-Rates" title="Permalink"></a></h2><p>Plot the residual norm <span>$\|Ax - b\|_2$</span> across iterations to observe FISTA&#39;s accelerated convergence.</p><pre><code class="language-julia hljs">fig = Figure(size = (650, 350))
+ax = Axis(fig[1, 1], title = &quot;Convergence History (Residual Norm ||Ax - b||)&quot;,
+          xlabel = &quot;Iteration&quot;, ylabel = &quot;Residual Norm&quot;, yscale = log10)
+
+lines!(ax, res_landweber, label = &quot;Landweber (Standard Gradient)&quot;, color = :blue, linewidth = 2)
+lines!(ax, res_fista,     label = &quot;FISTA (Accelerated Proximal)&quot;, color = :red,  linewidth = 2)
+
+axislegend(ax, position = :rt)
+fig</code></pre><p><img src="../../assets/tutorials/03_convergence.png" alt="Convergence History"/></p><h2 id="8.-Visual-Comparison-of-Reconstructed-Images"><a class="docs-heading-anchor" href="#8.-Visual-Comparison-of-Reconstructed-Images">8. Visual Comparison of Reconstructed Images</a><a id="8.-Visual-Comparison-of-Reconstructed-Images-1"></a><a class="docs-heading-anchor-permalink" href="#8.-Visual-Comparison-of-Reconstructed-Images" title="Permalink"></a></h2><p>Compare the baseline FBP reconstruction with our custom Landweber and FISTA reconstructions. Notice how FISTA effectively suppresses noise while preserving sharp boundaries.</p><pre><code class="language-julia hljs"># Standard FBP baseline for comparison
+rec_fbp = reconstruct(b_noisy, proj_geom, FBPMethod(); volume_size = (nx, ny))
+
+img_landweber = reshape(x_landweber_vec, nx, ny)
+img_fista     = reshape(x_fista_vec, nx, ny)
+
+fig = Figure(size = (800, 750))
+
+ax1 = Axis(fig[1, 1], title = &quot;Ground Truth&quot;, aspect = DataAspect())
+heatmap!(ax1, x_true, colormap = :viridis)
+
+ax2 = Axis(fig[1, 2], title = &quot;FBP Baseline (Noisy &amp; Streaky)&quot;, aspect = DataAspect())
+heatmap!(ax2, rec_fbp, colormap = :viridis)
+
+ax3 = Axis(fig[2, 1], title = &quot;Custom Landweber (60 iters)&quot;, aspect = DataAspect())
+heatmap!(ax3, img_landweber, colormap = :viridis)
+
+ax4 = Axis(fig[2, 2], title = &quot;Custom FISTA (60 iters, L1 Sparsity)&quot;, aspect = DataAspect())
+heatmap!(ax4, img_fista, colormap = :viridis)
+
+fig</code></pre><p><img src="../../assets/tutorials/03_recon_comparison.png" alt="Reconstruction Visual Comparison"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../02_projector_and_adjoint/">« Tutorial 2: Linear Operators &amp; Adjointness</a><a class="docs-footer-nextpage" href="../04_3d_conebeam_fdk/">Tutorial 4: 3D Cone-Beam FDK »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Saturday 10 October 2026 09:09">Saturday 10 October 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

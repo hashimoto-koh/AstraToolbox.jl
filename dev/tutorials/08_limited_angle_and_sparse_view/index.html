@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorial 8: Limited-Angle &amp; Sparse-View CT · AstraToolbox.jl</title><meta name="title" content="Tutorial 8: Limited-Angle &amp; Sparse-View CT · AstraToolbox.jl"/><meta property="og:title" content="Tutorial 8: Limited-Angle &amp; Sparse-View CT · AstraToolbox.jl"/><meta property="twitter:title" content="Tutorial 8: Limited-Angle &amp; Sparse-View CT · AstraToolbox.jl"/><meta name="description" content="Documentation for AstraToolbox.jl."/><meta property="og:description" content="Documentation for AstraToolbox.jl."/><meta property="twitter:description" content="Documentation for AstraToolbox.jl."/><meta property="og:url" content="https://hashimoto-koh.github.io/AstraToolbox.jl/tutorials/08_limited_angle_and_sparse_view/"/><meta property="twitter:url" content="https://hashimoto-koh.github.io/AstraToolbox.jl/tutorials/08_limited_angle_and_sparse_view/"/><link rel="canonical" href="https://hashimoto-koh.github.io/AstraToolbox.jl/tutorials/08_limited_angle_and_sparse_view/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">AstraToolbox.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../quickstart/">Quick Start</a></li><li><a class="tocitem" href="../../installation/">Installation</a></li><li><a class="tocitem" href="../../toolbox_contents/">Toolbox contents</a></li><li><a class="tocitem" href="../../data_objects/">Data Objects</a></li><li><span class="tocitem">Geometries</span><ul><li><a class="tocitem" href="../../geometries_2d/">2D Geometries</a></li><li><a class="tocitem" href="../../geometries_3d/">3D Geometries</a></li></ul></li><li><a class="tocitem" href="../../projectors/">Projectors</a></li><li><a class="tocitem" href="../../algorithms/">Algorithms</a></li><li><a class="tocitem" href="../../utilities/">Utilities</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../01_2d_parallel_basic/">Tutorial 1: 2D Parallel-Beam CT</a></li><li><a class="tocitem" href="../02_projector_and_adjoint/">Tutorial 2: Linear Operators &amp; Adjointness</a></li><li><a class="tocitem" href="../03_custom_iterative_reconstruction/">Tutorial 3: Custom FISTA Reconstruction</a></li><li><a class="tocitem" href="../04_3d_conebeam_fdk/">Tutorial 4: 3D Cone-Beam FDK</a></li><li><a class="tocitem" href="../05_3d_geometry_and_cone_vec/">Tutorial 5: 3D Vector Geometry &amp; Alignment</a></li><li><a class="tocitem" href="../06_conebeam_laminography/">Tutorial 6: Computed Laminography</a></li><li><a class="tocitem" href="../07_sampling_and_accuracy/">Tutorial 7: Spatial Sampling &amp; Accuracy</a></li><li class="is-active"><a class="tocitem" href>Tutorial 8: Limited-Angle &amp; Sparse-View CT</a><ul class="internal"><li><a class="tocitem" href="#Prerequisites"><span>Prerequisites</span></a></li><li><a class="tocitem" href="#1.-Introduction"><span>1. Introduction</span></a></li><li><a class="tocitem" href="#2.-Package-Loading-and-Environment-Setup"><span>2. Package Loading and Environment Setup</span></a></li><li><a class="tocitem" href="#3.-Geometric-Definitions-and-Forward-Projections-for-3-Scan-Conditions"><span>3. Geometric Definitions and Forward Projections for 3 Scan Conditions</span></a></li><li><a class="tocitem" href="#4.-Breakdown-of-Analytical-FBP"><span>4. Breakdown of Analytical FBP</span></a></li><li><a class="tocitem" href="#5.-Algebraic-Iterative-Reconstruction-(SIRT)-with-Non-Negativity-Constraints"><span>5. Algebraic Iterative Reconstruction (SIRT) with Non-Negativity Constraints</span></a></li><li><a class="tocitem" href="#6.-Discrete-Tomography-(DART):-High-Fidelity-Reconstruction-from-Minimal-Projections"><span>6. Discrete Tomography (DART): High-Fidelity Reconstruction from Minimal Projections</span></a></li></ul></li><li><a class="tocitem" href="../09_large_scale_and_gpu/">Tutorial 9: GPU Memory &amp; Large Scale</a></li></ul></li><li><a class="tocitem" href="../../demos/">Interactive Demonstrations</a></li><li><a class="tocitem" href="../../misc/">Miscellaneous</a></li><li><a class="tocitem" href="../../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Tutorial 8: Limited-Angle &amp; Sparse-View CT</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Tutorial 8: Limited-Angle &amp; Sparse-View CT</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/hashimoto-koh/AstraToolbox.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/hashimoto-koh/AstraToolbox.jl/blob/master/docs/src/tutorials/08_limited_angle_and_sparse_view.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Tutorial-8:-Reconstruction-Comparison:-Limited-Angle-and-Sparse-View-CT"><a class="docs-heading-anchor" href="#Tutorial-8:-Reconstruction-Comparison:-Limited-Angle-and-Sparse-View-CT">Tutorial 8: Reconstruction Comparison: Limited-Angle and Sparse-View CT</a><a id="Tutorial-8:-Reconstruction-Comparison:-Limited-Angle-and-Sparse-View-CT-1"></a><a class="docs-heading-anchor-permalink" href="#Tutorial-8:-Reconstruction-Comparison:-Limited-Angle-and-Sparse-View-CT" title="Permalink"></a></h1><p>Incomplete Data Conditions, FBP Breakdown, SIRT Non-Negativity Constraints, and DART Discrete Reconstruction.</p><h2 id="Prerequisites"><a class="docs-heading-anchor" href="#Prerequisites">Prerequisites</a><a id="Prerequisites-1"></a><a class="docs-heading-anchor-permalink" href="#Prerequisites" title="Permalink"></a></h2><p>This tutorial uses <strong>Makie</strong> (recommended backend: <strong>CairoMakie</strong>) for visualization. If <code>CairoMakie</code> is not installed in your environment, add it by running <code>using Pkg; Pkg.add(&quot;CairoMakie&quot;)</code>.</p><h2 id="1.-Introduction"><a class="docs-heading-anchor" href="#1.-Introduction">1. Introduction</a><a id="1.-Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Introduction" title="Permalink"></a></h2><p>In real-world CT applications (low-dose medical imaging, high-speed in-line industrial inspection, or electron tomography constrained by specimen tilt holder stages), <strong>incomplete data problems</strong> frequently arise.</p><p>Typical incomplete data conditions:</p><ol><li><strong>Sparse-view CT</strong>: Angular span covers 180°, but with extremely few projection angles (e.g. 15–25 angles).</li><li><strong>Limited-angle CT</strong>: Mechanical constraints restrict angular coverage (e.g. only 0° to 120°).</li></ol><p>In this notebook, we observe how analytical FBP breaks down under these conditions, and demonstrate how algebraic iterative methods (SIRT) and Discrete Tomography (DART) recover high-fidelity reconstructions.</p><h2 id="2.-Package-Loading-and-Environment-Setup"><a class="docs-heading-anchor" href="#2.-Package-Loading-and-Environment-Setup">2. Package Loading and Environment Setup</a><a id="2.-Package-Loading-and-Environment-Setup-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Package-Loading-and-Environment-Setup" title="Permalink"></a></h2><pre><code class="language-julia hljs">using AstraToolbox
+using CairoMakie
+using LinearAlgebra
+
+println(&quot;Ready for Limited-Angle &amp; Sparse-View CT exploration!&quot;)</code></pre><h2 id="3.-Geometric-Definitions-and-Forward-Projections-for-3-Scan-Conditions"><a class="docs-heading-anchor" href="#3.-Geometric-Definitions-and-Forward-Projections-for-3-Scan-Conditions">3. Geometric Definitions and Forward Projections for 3 Scan Conditions</a><a id="3.-Geometric-Definitions-and-Forward-Projections-for-3-Scan-Conditions-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Geometric-Definitions-and-Forward-Projections-for-3-Scan-Conditions" title="Permalink"></a></h2><p>We simulate sinograms for three scanning conditions on the same phantom:</p><ul><li><strong>Condition A (Full 180°)</strong>: 180 angles (complete data).</li><li><strong>Condition B (Sparse-view)</strong>: 25 angles (angular undersampling).</li><li><strong>Condition C (Limited-angle)</strong>: 0° to 120° only (60 angles, missing angular wedge).</li></ul><pre><code class="language-julia hljs">nx, ny = 128, 128
+vol_geom = VolumeGeometry2D(nx, ny)
+phantom = shepp_logan(nx)
+
+# Condition A: Full 180° (180 angles)
+angles_full = Float32.(range(0, pi, length = 180))
+geom_full = Parallel2DGeometry(angles_full, 128, 1.0f0)
+
+# Condition B: Sparse-view (only 25 angles)
+angles_sparse = Float32.(range(0, pi, length = 25))
+geom_sparse = Parallel2DGeometry(angles_sparse, 128, 1.0f0)
+
+# Condition C: Limited-angle (0 to 120 deg = 2pi/3 only)
+angles_limited = Float32.(range(0, 2pi/3, length = 60))
+geom_limited = Parallel2DGeometry(angles_limited, 128, 1.0f0)
+
+# Generate sinograms
+sino_full    = project(phantom, geom_full)
+sino_sparse  = project(phantom, geom_sparse)
+sino_limited = project(phantom, geom_limited)
+
+println(&quot;Full sino size:    &quot;, size(sino_full))
+println(&quot;Sparse sino size:  &quot;, size(sino_sparse))
+println(&quot;Limited sino size: &quot;, size(sino_limited))</code></pre><h2 id="4.-Breakdown-of-Analytical-FBP"><a class="docs-heading-anchor" href="#4.-Breakdown-of-Analytical-FBP">4. Breakdown of Analytical FBP</a><a id="4.-Breakdown-of-Analytical-FBP-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Breakdown-of-Analytical-FBP" title="Permalink"></a></h2><p>Applying analytical FBP to these incomplete sinograms reveals severe limitations:</p><ul><li>In Sparse-view, intense radial streak artifacts permeate the image.</li><li>In Limited-angle, edges aligned with missing angles become heavily blurred and distorted.</li></ul><pre><code class="language-julia hljs">rec_fbp_full    = reconstruct(sino_full,    geom_full,    FBPMethod(); volume_size = (nx, ny))
+rec_fbp_sparse  = reconstruct(sino_sparse,  geom_sparse,  FBPMethod(); volume_size = (nx, ny))
+rec_fbp_limited = reconstruct(sino_limited, geom_limited, FBPMethod(); volume_size = (nx, ny))
+
+fig = Figure(size = (900, 320))
+
+ax1 = Axis(fig[1, 1], title = &quot;FBP: Full 180° (180 views)&quot;, aspect = DataAspect())
+heatmap!(ax1, rec_fbp_full, colormap = :viridis)
+
+ax2 = Axis(fig[1, 2], title = &quot;FBP: Sparse-view (25 views, Streaks!)&quot;, aspect = DataAspect())
+heatmap!(ax2, rec_fbp_sparse, colormap = :viridis)
+
+ax3 = Axis(fig[1, 3], title = &quot;FBP: Limited-angle (0-120°, Distorted!)&quot;, aspect = DataAspect())
+heatmap!(ax3, rec_fbp_limited, colormap = :viridis)
+
+fig</code></pre><p><img src="../../assets/tutorials/08_fbp_breakdown.png" alt="FBP Breakdown under Incomplete Data"/></p><h2 id="5.-Algebraic-Iterative-Reconstruction-(SIRT)-with-Non-Negativity-Constraints"><a class="docs-heading-anchor" href="#5.-Algebraic-Iterative-Reconstruction-(SIRT)-with-Non-Negativity-Constraints">5. Algebraic Iterative Reconstruction (SIRT) with Non-Negativity Constraints</a><a id="5.-Algebraic-Iterative-Reconstruction-(SIRT)-with-Non-Negativity-Constraints-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Algebraic-Iterative-Reconstruction-(SIRT)-with-Non-Negativity-Constraints" title="Permalink"></a></h2><p>Iterative methods regularize missing data using physical prior constraints (<span>$x \ge 0$</span>). We apply SIRT with non-negativity constraints to both incomplete sinograms.</p><pre><code class="language-julia hljs"># SIRT reconstruction (non-negative constraint, 80 iterations)
+rec_sirt_sparse = reconstruct(
+    sino_sparse,
+    geom_sparse,
+    SIRTMethod(iterations = 80, min_constraint = 0.0f0);
+    volume_size = (nx, ny)
+)
+
+rec_sirt_limited = reconstruct(
+    sino_limited,
+    geom_limited,
+    SIRTMethod(iterations = 80, min_constraint = 0.0f0);
+    volume_size = (nx, ny)
+)
+
+fig = Figure(size = (800, 700))
+
+ax1 = Axis(fig[1, 1], title = &quot;FBP: Sparse-view (25 views)&quot;, aspect = DataAspect())
+heatmap!(ax1, rec_fbp_sparse, colormap = :viridis)
+
+ax2 = Axis(fig[1, 2], title = &quot;SIRT: Sparse-view (Non-neg 80 iters)&quot;, aspect = DataAspect())
+heatmap!(ax2, rec_sirt_sparse, colormap = :viridis)
+
+ax3 = Axis(fig[2, 1], title = &quot;FBP: Limited-angle (120°)&quot;, aspect = DataAspect())
+heatmap!(ax3, rec_fbp_limited, colormap = :viridis)
+
+ax4 = Axis(fig[2, 2], title = &quot;SIRT: Limited-angle (Non-neg 80 iters)&quot;, aspect = DataAspect())
+heatmap!(ax4, rec_sirt_limited, colormap = :viridis)
+
+fig</code></pre><p><img src="../../assets/tutorials/08_sirt_improvement.png" alt="SIRT Artifact Suppression"/></p><h2 id="6.-Discrete-Tomography-(DART):-High-Fidelity-Reconstruction-from-Minimal-Projections"><a class="docs-heading-anchor" href="#6.-Discrete-Tomography-(DART):-High-Fidelity-Reconstruction-from-Minimal-Projections">6. Discrete Tomography (DART): High-Fidelity Reconstruction from Minimal Projections</a><a id="6.-Discrete-Tomography-(DART):-High-Fidelity-Reconstruction-from-Minimal-Projections-1"></a><a class="docs-heading-anchor-permalink" href="#6.-Discrete-Tomography-(DART):-High-Fidelity-Reconstruction-from-Minimal-Projections" title="Permalink"></a></h2><p>When an object is composed of a few discrete known materials (such as air, soft tissue, and bone), <strong>DART (Discrete Algebraic Reconstruction Technique)</strong> can reconstruct crisp, segmented images from as few as 15 projections.</p><h3 id="reconstruct_dart-Arguments:"><a class="docs-heading-anchor" href="#reconstruct_dart-Arguments:"><code>reconstruct_dart</code> Arguments:</a><a id="reconstruct_dart-Arguments:-1"></a><a class="docs-heading-anchor-permalink" href="#reconstruct_dart-Arguments:" title="Permalink"></a></h3><ul><li><code>sinogram</code>: Input projection data.</li><li><code>geometry</code>: Projection geometry.</li><li><code>gray_levels</code>: Array of known discrete attenuation values (e.g. <code>[0.0f0, 0.2f0, 0.3f0, 1.0f0]</code>).</li><li><code>iterations</code>: Number of outer DART iterations (default: 10).</li><li><code>arm_iterations</code>: Number of inner algebraic reconstruction iterations per DART cycle (default: 5).</li><li><code>smoothing_radius</code>: Radius for boundary smoothing filter.</li><li><strong>Returns</strong>: A NamedTuple <code>(reconstruction, segmentation, mask)</code>.</li></ul><pre><code class="language-julia hljs"># Create an ultra-sparse geometry with only 15 angles
+angles_ultra_sparse = Float32.(range(0, pi, length = 15))
+geom_ultra_sparse = Parallel2DGeometry(angles_ultra_sparse, 128, 1.0f0)
+sino_ultra_sparse = project(phantom, geom_ultra_sparse)
+
+# Standard SIRT reconstruction (blurry with only 15 angles)
+rec_sirt_15 = reconstruct(sino_ultra_sparse, geom_ultra_sparse, SIRTMethod(iterations = 50, min_constraint = 0.0f0); volume_size = (nx, ny))
+
+# DART discrete reconstruction
+dart_levels = Float32[0.0, 0.2, 0.3, 1.0] # Known discrete gray values in phantom
+dart_res = reconstruct_dart(
+    sino_ultra_sparse,
+    geom_ultra_sparse,
+    dart_levels;
+    volume_size = (nx, ny),
+    iterations = 8,
+    arm_iterations = 6
+)
+
+fig = Figure(size = (900, 320))
+
+ax1 = Axis(fig[1, 1], title = &quot;Ground Truth&quot;, aspect = DataAspect())
+heatmap!(ax1, phantom, colormap = :viridis)
+
+ax2 = Axis(fig[1, 2], title = &quot;SIRT (15 angles only - Blurry)&quot;, aspect = DataAspect())
+heatmap!(ax2, rec_sirt_15, colormap = :viridis)
+
+ax3 = Axis(fig[1, 3], title = &quot;DART (15 angles - Crisp Segmentation!)&quot;, aspect = DataAspect())
+heatmap!(ax3, dart_res.segmentation, colormap = :viridis)
+
+fig</code></pre><p><img src="../../assets/tutorials/08_dart_recovery.png" alt="DART Discrete Recovery from 15 Projections"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../07_sampling_and_accuracy/">« Tutorial 7: Spatial Sampling &amp; Accuracy</a><a class="docs-footer-nextpage" href="../09_large_scale_and_gpu/">Tutorial 9: GPU Memory &amp; Large Scale »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Saturday 10 October 2026 09:09">Saturday 10 October 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

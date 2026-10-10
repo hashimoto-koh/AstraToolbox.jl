@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorial 9: GPU Memory &amp; Large Scale · AstraToolbox.jl</title><meta name="title" content="Tutorial 9: GPU Memory &amp; Large Scale · AstraToolbox.jl"/><meta property="og:title" content="Tutorial 9: GPU Memory &amp; Large Scale · AstraToolbox.jl"/><meta property="twitter:title" content="Tutorial 9: GPU Memory &amp; Large Scale · AstraToolbox.jl"/><meta name="description" content="Documentation for AstraToolbox.jl."/><meta property="og:description" content="Documentation for AstraToolbox.jl."/><meta property="twitter:description" content="Documentation for AstraToolbox.jl."/><meta property="og:url" content="https://hashimoto-koh.github.io/AstraToolbox.jl/tutorials/09_large_scale_and_gpu/"/><meta property="twitter:url" content="https://hashimoto-koh.github.io/AstraToolbox.jl/tutorials/09_large_scale_and_gpu/"/><link rel="canonical" href="https://hashimoto-koh.github.io/AstraToolbox.jl/tutorials/09_large_scale_and_gpu/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">AstraToolbox.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../quickstart/">Quick Start</a></li><li><a class="tocitem" href="../../installation/">Installation</a></li><li><a class="tocitem" href="../../toolbox_contents/">Toolbox contents</a></li><li><a class="tocitem" href="../../data_objects/">Data Objects</a></li><li><span class="tocitem">Geometries</span><ul><li><a class="tocitem" href="../../geometries_2d/">2D Geometries</a></li><li><a class="tocitem" href="../../geometries_3d/">3D Geometries</a></li></ul></li><li><a class="tocitem" href="../../projectors/">Projectors</a></li><li><a class="tocitem" href="../../algorithms/">Algorithms</a></li><li><a class="tocitem" href="../../utilities/">Utilities</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../01_2d_parallel_basic/">Tutorial 1: 2D Parallel-Beam CT</a></li><li><a class="tocitem" href="../02_projector_and_adjoint/">Tutorial 2: Linear Operators &amp; Adjointness</a></li><li><a class="tocitem" href="../03_custom_iterative_reconstruction/">Tutorial 3: Custom FISTA Reconstruction</a></li><li><a class="tocitem" href="../04_3d_conebeam_fdk/">Tutorial 4: 3D Cone-Beam FDK</a></li><li><a class="tocitem" href="../05_3d_geometry_and_cone_vec/">Tutorial 5: 3D Vector Geometry &amp; Alignment</a></li><li><a class="tocitem" href="../06_conebeam_laminography/">Tutorial 6: Computed Laminography</a></li><li><a class="tocitem" href="../07_sampling_and_accuracy/">Tutorial 7: Spatial Sampling &amp; Accuracy</a></li><li><a class="tocitem" href="../08_limited_angle_and_sparse_view/">Tutorial 8: Limited-Angle &amp; Sparse-View CT</a></li><li class="is-active"><a class="tocitem" href>Tutorial 9: GPU Memory &amp; Large Scale</a><ul class="internal"><li><a class="tocitem" href="#Prerequisites"><span>Prerequisites</span></a></li><li><a class="tocitem" href="#1.-Introduction"><span>1. Introduction</span></a></li><li><a class="tocitem" href="#2.-Package-Loading-and-Inspecting-GPU-Information"><span>2. Package Loading and Inspecting GPU Information</span></a></li><li><a class="tocitem" href="#3.-In-Place-vs.-Out-of-Place-Memory-Allocation-and-Speed"><span>3. In-Place vs. Out-of-Place Memory Allocation and Speed</span></a></li><li><a class="tocitem" href="#4.-3D-Volume-Resolution-Scaling-Benchmark"><span>4. 3D Volume Resolution Scaling Benchmark</span></a></li><li><a class="tocitem" href="#5.-Tiled-Composite-Projections-(do_composite_FP-/-do_composite_BP)"><span>5. Tiled Composite Projections (<code>do_composite_FP</code> / <code>do_composite_BP</code>)</span></a></li><li><a class="tocitem" href="#6.-Summary:-Best-Practices-for-Large-Scale-Tomography"><span>6. Summary: Best Practices for Large-Scale Tomography</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../../demos/">Interactive Demonstrations</a></li><li><a class="tocitem" href="../../misc/">Miscellaneous</a></li><li><a class="tocitem" href="../../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Tutorial 9: GPU Memory &amp; Large Scale</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Tutorial 9: GPU Memory &amp; Large Scale</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/hashimoto-koh/AstraToolbox.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/hashimoto-koh/AstraToolbox.jl/blob/master/docs/src/tutorials/09_large_scale_and_gpu.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Tutorial-9:-GPU-Memory-Management,-Performance-Optimization,-and-Composite-Tiled-Projection"><a class="docs-heading-anchor" href="#Tutorial-9:-GPU-Memory-Management,-Performance-Optimization,-and-Composite-Tiled-Projection">Tutorial 9: GPU Memory Management, Performance Optimization, and Composite Tiled Projection</a><a id="Tutorial-9:-GPU-Memory-Management,-Performance-Optimization,-and-Composite-Tiled-Projection-1"></a><a class="docs-heading-anchor-permalink" href="#Tutorial-9:-GPU-Memory-Management,-Performance-Optimization,-and-Composite-Tiled-Projection" title="Permalink"></a></h1><p>Zero-allocation In-place API, GPU Throughput Benchmarks, and Tiled Composite Projections for Massive Volumes.</p><h2 id="Prerequisites"><a class="docs-heading-anchor" href="#Prerequisites">Prerequisites</a><a id="Prerequisites-1"></a><a class="docs-heading-anchor-permalink" href="#Prerequisites" title="Permalink"></a></h2><p>This tutorial uses <strong>Makie</strong> (recommended backend: <strong>CairoMakie</strong>) for visualization. If <code>CairoMakie</code> is not installed in your environment, add it by running <code>using Pkg; Pkg.add(&quot;CairoMakie&quot;)</code>.</p><h2 id="1.-Introduction"><a class="docs-heading-anchor" href="#1.-Introduction">1. Introduction</a><a id="1.-Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Introduction" title="Permalink"></a></h2><p>In 3D computed tomography, memory requirements scale cubically with volume resolution: <span>$256^3 \to 512^3 \to 1024^3$</span> represents an 8x memory surge per 2x resolution increase. High-performance CT workflows therefore rely on key architectural optimizations:</p><ol><li><strong>CUDA Acceleration</strong>: Harnessing GPU parallelism for forward/backprojection kernels.</li><li><strong>Eliminating Heap Reallocations</strong>: Leveraging in-place APIs (<code>project!</code>, <code>backproject!</code>) for zero GC overhead.</li><li><strong>Overcoming GPU VRAM Ceilings</strong>: Slicing and compositing oversized volumes across tiles with <code>do_composite_FP</code> and <code>do_composite_BP</code>.</li></ol><h3 id="Topics-covered-in-this-notebook:"><a class="docs-heading-anchor" href="#Topics-covered-in-this-notebook:">Topics covered in this notebook:</a><a id="Topics-covered-in-this-notebook:-1"></a><a class="docs-heading-anchor-permalink" href="#Topics-covered-in-this-notebook:" title="Permalink"></a></h3><ul><li>Benchmarking memory efficiency with <code>@time</code> and <code>@allocated</code>.</li><li>Comparing Out-of-place vs. In-place speed and allocations.</li><li>Measuring 3D scaling throughput (Mega-Voxels/second).</li><li>Tiled composite forward projection (<code>do_composite_FP</code>) for volumes exceeding VRAM.</li></ul><h2 id="2.-Package-Loading-and-Inspecting-GPU-Information"><a class="docs-heading-anchor" href="#2.-Package-Loading-and-Inspecting-GPU-Information">2. Package Loading and Inspecting GPU Information</a><a id="2.-Package-Loading-and-Inspecting-GPU-Information-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Package-Loading-and-Inspecting-GPU-Information" title="Permalink"></a></h2><pre><code class="language-julia hljs">using AstraToolbox
+using CairoMakie
+using LinearAlgebra
+
+# Check available GPU information
+println(&quot;Has CUDA available: &quot;, has_cuda())
+if has_cuda()
+    println(&quot;GPU count: &quot;, get_gpu_count())
+    println(&quot;Active GPU device index: &quot;, get_gpu_index())
+    gpu_info = get_gpu_info()
+    println(&quot;GPU Info: &quot;, isempty(gpu_info) ? &quot;N/A&quot; : gpu_info)
+end</code></pre><h2 id="3.-In-Place-vs.-Out-of-Place-Memory-Allocation-and-Speed"><a class="docs-heading-anchor" href="#3.-In-Place-vs.-Out-of-Place-Memory-Allocation-and-Speed">3. In-Place vs. Out-of-Place Memory Allocation and Speed</a><a id="3.-In-Place-vs.-Out-of-Place-Memory-Allocation-and-Speed-1"></a><a class="docs-heading-anchor-permalink" href="#3.-In-Place-vs.-Out-of-Place-Memory-Allocation-and-Speed" title="Permalink"></a></h2><p>We use Julia&#39;s <code>@allocated</code> macro to measure heap memory allocated per projection call:</p><ul><li><code>project</code>: Allocates a new array each time (causing heavy GC overhead inside iterative loops).</li><li><code>project!</code>: Reuses pre-allocated buffers (Allocation = 0 bytes).</li></ul><pre><code class="language-julia hljs">nx, ny = 256, 256
+phantom = shepp_logan(nx)
+angles = Float32.(range(0, pi, length = 180))
+proj_geom = Parallel2DGeometry(angles, 256, 1.0f0)
+
+# Warmup
+_ = project(phantom, proj_geom)
+
+# 1. Out-of-place project
+time_out = @elapsed for _ in 1:10
+    _ = project(phantom, proj_geom)
+end
+alloc_out = @allocated project(phantom, proj_geom)
+
+# 2. In-place project!
+sino_buf = zeros(Float32, geom_size(proj_geom))
+time_in = @elapsed for _ in 1:10
+    project!(sino_buf, phantom, proj_geom)
+end
+alloc_in = @allocated project!(sino_buf, phantom, proj_geom)
+
+println(&quot;Out-of-place project:&quot;)
+println(&quot;  Average time:     &quot;, round(time_out / 10 * 1000, digits=3), &quot; ms&quot;)
+println(&quot;  Memory allocated: &quot;, alloc_out, &quot; bytes&quot;)
+println(&quot;In-place project!:&quot;)
+println(&quot;  Average time:     &quot;, round(time_in / 10 * 1000, digits=3), &quot; ms&quot;)
+println(&quot;  Memory allocated: &quot;, alloc_in, &quot; bytes (Zero Allocation!)&quot;)</code></pre><h2 id="4.-3D-Volume-Resolution-Scaling-Benchmark"><a class="docs-heading-anchor" href="#4.-3D-Volume-Resolution-Scaling-Benchmark">4. 3D Volume Resolution Scaling Benchmark</a><a id="4.-3D-Volume-Resolution-Scaling-Benchmark-1"></a><a class="docs-heading-anchor-permalink" href="#4.-3D-Volume-Resolution-Scaling-Benchmark" title="Permalink"></a></h2><p>We benchmark forward projection (FP) and backprojection (BP) times as 3D CBCT resolution scales from <span>$64^3$</span> to <span>$96^3$</span> and <span>$128^3$</span>, measuring processing throughput in Mega-Voxels per second.</p><pre><code class="language-julia hljs">if has_cuda()
+    resolutions = [64, 96, 128]
+    fp_times = Float64[]
+    bp_times = Float64[]
+    voxel_counts = [res^3 for res in resolutions]
+    
+    for res in resolutions
+        v_test = rand(Float32, res, res, res)
+        angles_test = Float32.(range(0, 2pi, length = 60))
+        geom_test = Cone3DGeometry(angles_test, res, res, 800.0f0, 400.0f0; detector_spacing_u = 1.0f0, detector_spacing_v = 1.0f0)
+        
+        # FP
+        sino_test = zeros(Float32, geom_size(geom_test))
+        project!(sino_test, v_test, geom_test; backend = cuda()) # warmup
+        t_fp = @elapsed project!(sino_test, v_test, geom_test; backend = cuda())
+        push!(fp_times, t_fp)
+        
+        # BP
+        v_out = zeros(Float32, res, res, res)
+        backproject!(v_out, sino_test, geom_test; backend = cuda()) # warmup
+        t_bp = @elapsed backproject!(v_out, sino_test, geom_test; backend = cuda())
+        push!(bp_times, t_bp)
+        
+        println(&quot;Resolution $(res)^3 ($(res^3) voxels): FP = $(round(t_fp*1000, digits=1)) ms, BP = $(round(t_bp*1000, digits=1)) ms&quot;)
+    end
+    
+    # Throughput plot
+    fig = Figure(size = (650, 350))
+    ax = Axis(fig[1, 1], title = &quot;3D GPU Processing Throughput&quot;,
+              xlabel = &quot;Volume Resolution (N x N x N)&quot;, ylabel = &quot;Mega-Voxels / second&quot;)
+    
+    fp_throughput = (voxel_counts ./ fp_times) ./ 1e6
+    bp_throughput = (voxel_counts ./ bp_times) ./ 1e6
+    
+    barplot!(ax, [1.0, 2.0, 3.0] .- 0.15, fp_throughput, width = 0.25, label = &quot;Forward Projection (FP)&quot;, color = :blue)
+    barplot!(ax, [1.0, 2.0, 3.0] .+ 0.15, bp_throughput, width = 0.25, label = &quot;Backprojection (BP)&quot;, color = :orange)
+    ax.xticks = (1:3, [&quot;64³&quot;, &quot;96³&quot;, &quot;128³&quot;])
+    axislegend(ax, position = :lt)
+    fig
+else
+    println(&quot;CUDA is not available. Skipping 3D GPU scaling benchmark.&quot;)
+end</code></pre><p><img src="../../assets/tutorials/09_throughput.png" alt="3D GPU Processing Throughput"/></p><h2 id="5.-Tiled-Composite-Projections-(do_composite_FP-/-do_composite_BP)"><a class="docs-heading-anchor" href="#5.-Tiled-Composite-Projections-(do_composite_FP-/-do_composite_BP)">5. Tiled Composite Projections (<code>do_composite_FP</code> / <code>do_composite_BP</code>)</a><a id="5.-Tiled-Composite-Projections-(do_composite_FP-/-do_composite_BP)-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Tiled-Composite-Projections-(do_composite_FP-/-do_composite_BP)" title="Permalink"></a></h2><p>A <span>$2048^3$</span> volume consumes 32 GB of memory, exceeding the VRAM capacity of most GPUs (12 GB–24 GB). AstraToolbox.jl&#39;s <strong>Composite Geometry Module (<code>do_composite_FP</code> / <code>do_composite_BP</code>)</strong> slices volumes into spatial tiles or Z-blocks, projecting each block independently and seamlessly summing detector contributions.</p><h3 id="do_composite_FP-Arguments:"><a class="docs-heading-anchor" href="#do_composite_FP-Arguments:"><code>do_composite_FP</code> Arguments:</a><a id="do_composite_FP-Arguments:-1"></a><a class="docs-heading-anchor-permalink" href="#do_composite_FP-Arguments:" title="Permalink"></a></h3><ul><li><code>do_composite_FP(volumes, projections; mode=:set)</code></li><li><code>volumes</code>: List of volume pairs <code>[volume_part1 =&gt; vg1, volume_part2 =&gt; vg2]</code></li><li><code>projections</code>: Projection geometry or sinogram data</li></ul><pre><code class="language-julia hljs">if has_cuda()
+    # Simulate an oversized volume using 2 Z-slice blocks
+    # Block 1 (Lower half): Z = -16 to 0
+    # Block 2 (Upper half): Z = 0 to +16
+    vg_lower = VolumeGeometry3D(64, 64, 16; window = (-32, 32, -32, 32, -16, 0))
+    vg_upper = VolumeGeometry3D(64, 64, 16; window = (-32, 32, -32, 32,   0, 16))
+    
+    # Distinct patterns in each block
+    v_lower = fill(0.5f0, 64, 64, 16)
+    v_upper = fill(1.0f0, 64, 64, 16)
+    
+    # Projection geometry
+    angles_comp = Float32.(range(0, 2pi, length = 36))
+    cg_comp = Cone3DGeometry(angles_comp, 80, 80, 800.0f0, 400.0f0; detector_spacing_u = 1.0f0, detector_spacing_v = 1.0f0)
+    
+    # Execute tiled composite projection
+    # Contributions from both blocks are automatically accumulated on the detector
+    sino_composite = do_composite_FP(
+        [v_lower =&gt; vg_lower, v_upper =&gt; vg_upper],
+        cg_comp
+    )
+    
+    println(&quot;Composite projection finished! Output sinogram size: &quot;, size(sino_composite))
+    
+    # Visualize composite projection
+    fig = Figure(size = (500, 400))
+    ax = Axis(fig[1, 1], title = &quot;Composite Projection (Split Z-blocks)&quot;, aspect = DataAspect())
+    heatmap!(ax, sino_composite[:, 1, :], colormap = :plasma)
+    fig
+else
+    println(&quot;CUDA is not available. Skipping composite projection test.&quot;)
+end</code></pre><p><img src="../../assets/tutorials/09_composite.png" alt="Tiled Composite Forward Projection"/></p><h2 id="6.-Summary:-Best-Practices-for-Large-Scale-Tomography"><a class="docs-heading-anchor" href="#6.-Summary:-Best-Practices-for-Large-Scale-Tomography">6. Summary: Best Practices for Large-Scale Tomography</a><a id="6.-Summary:-Best-Practices-for-Large-Scale-Tomography-1"></a><a class="docs-heading-anchor-permalink" href="#6.-Summary:-Best-Practices-for-Large-Scale-Tomography" title="Permalink"></a></h2><ol><li><strong>Pre-allocate Memory</strong>: Always use in-place methods <code>project!</code> and <code>backproject!</code> within iterative reconstruction loops to eliminate per-step array allocations and GC stalls.</li><li><strong>Type Stability</strong>: Keep all arrays and floating-point parameters strictly as <code>Float32</code> to prevent implicit conversions and kernel execution slowdowns.</li><li><strong>Overcome GPU Memory Limits</strong>: Utilize <code>VolumeGeometry</code> ROI windows and <code>do_composite_FP</code> / <code>do_composite_BP</code> tiling to reconstruct volumes that exceed available GPU VRAM.</li></ol></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../08_limited_angle_and_sparse_view/">« Tutorial 8: Limited-Angle &amp; Sparse-View CT</a><a class="docs-footer-nextpage" href="../../demos/">Interactive Demonstrations »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Saturday 10 October 2026 09:09">Saturday 10 October 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
