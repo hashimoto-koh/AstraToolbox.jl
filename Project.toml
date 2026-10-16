@@ -1,8 +1,8 @@
 name = "AstraToolbox"
 uuid = "39fd2ec3-6036-4ca7-8d92-32cdf5624ab0"
 license = "GPL-3.0-or-later"
-authors = ["Koh Hashimoto <koh.hashimoto@gmail.com>", "AstraToolbox contributors"]
 version = "0.1.0"
+authors = ["Koh Hashimoto <koh.hashimoto@gmail.com>", "AstraToolbox contributors"]
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -12,6 +12,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
+Distributions = "0.25"
 SparseArrays = "1.11.0"
 julia = "1.11"
 
