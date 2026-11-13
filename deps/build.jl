@@ -9,7 +9,7 @@ const WRAPPER_HEADER = joinpath(@__DIR__, "wrapper", "include", "astra", "julia_
 const WRAPPER_SOURCE = joinpath(@__DIR__, "wrapper", "src", "julia_c_api.cpp")
 
 const DEFAULT_ASTRA_SOURCE = "https://github.com/astra-toolbox/astra-toolbox.git"
-const DEFAULT_ASTRA_REF = "bd0323e9b4b243ee90bca41341927b05e6e816c8"
+const DEFAULT_ASTRA_REF = "934920a46781142c2b8f0177007c395eae601783" # v2.5.0
 
 function env_or(names::Vector{String}, default::String = "")
     for name in names
@@ -50,10 +50,39 @@ function acquire_astra_source()
     source = env_or(["ASTRATOOLBOXJL_ASTRA_SOURCE"], DEFAULT_ASTRA_SOURCE)
     ref = env_or(["ASTRATOOLBOXJL_ASTRA_REF"], DEFAULT_ASTRA_REF)
 
-    if !isdir(SOURCE_ROOT)
+    if !isdir(SOURCE_ROOT) || !isdir(joinpath(SOURCE_ROOT, ".git"))
         reset_workdir(SOURCE_ROOT)
         run_logged(`git clone $source $SOURCE_ROOT`)
         run_logged(`git checkout $ref`; dir = SOURCE_ROOT)
+        rm(DEPS_FILE; force = true)
+    else
+        current_rev = try
+            readchomp(`git -C $SOURCE_ROOT rev-parse HEAD`)
+        catch
+            ""
+        end
+        target_rev = try
+            readchomp(`git -C $SOURCE_ROOT rev-parse $ref`)
+        catch
+            ""
+        end
+
+        if isempty(target_rev)
+            println("Fetching latest tags and commits from $source...")
+            run_logged(`git fetch --tags origin`; dir = SOURCE_ROOT)
+            target_rev = try
+                readchomp(`git -C $SOURCE_ROOT rev-parse $ref`)
+            catch
+                error("Specified ASTRA ref '$ref' could not be resolved in $SOURCE_ROOT after git fetch")
+            end
+        end
+
+        if current_rev != target_rev
+            println("Upstream work tree ref mismatch (current: $current_rev, target: $target_rev). Updating...")
+            run_logged(`git checkout -f $ref`; dir = SOURCE_ROOT)
+            run_logged(`git clean -fdx build/linux`; dir = SOURCE_ROOT)
+            rm(DEPS_FILE; force = true)
+        end
     end
 end
 
@@ -102,6 +131,12 @@ function install_library()
     target = joinpath(INSTALL_LIBDIR, "libastra.so")
     run_logged(`cp -L $built_lib $target`)
     write(DEPS_FILE, "const libastra = $(repr(target))\n")
+end
+
+if get(ENV, "ASTRATOOLBOXJL_SOURCE_ONLY", "") == "1"
+    acquire_astra_source()
+    println("ok: AstraToolbox source acquisition completed (ASTRATOOLBOXJL_SOURCE_ONLY=1)")
+    exit(0)
 end
 
 try

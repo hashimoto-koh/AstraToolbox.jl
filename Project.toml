@@ -1,7 +1,7 @@
 name = "AstraToolbox"
 uuid = "39fd2ec3-6036-4ca7-8d92-32cdf5624ab0"
 license = "GPL-3.0-or-later"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Koh Hashimoto <koh.hashimoto@gmail.com>", "AstraToolbox contributors"]
 
 [deps]

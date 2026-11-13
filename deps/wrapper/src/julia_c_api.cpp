@@ -13,6 +13,9 @@
 #include "astra/CudaFilteredBackProjectionAlgorithm.h"
 #include "astra/CudaEMAlgorithm.h"
 #include "astra/CudaFDKAlgorithm3D.h"
+#include "astra/CudaForwardProjectionAlgorithm.h"
+#include "astra/CudaForwardProjectionAlgorithm3D.h"
+#include "astra/CudaBackProjectionAlgorithm3D.h"
 #include "astra/CudaSartAlgorithm.h"
 #include "astra/CudaSirtAlgorithm.h"
 #include "astra/CudaSirtAlgorithm3D.h"
@@ -35,6 +38,7 @@
 #include "astra/CglsAlgorithm.h"
 #include "astra/FanFlatBeamStripKernelProjector2D.h"
 #include "astra/Features.h"
+#include "astra/Filters.h"
 #include "astra/ParallelBeamLinearKernelProjector2D.h"
 #include "astra/ParallelBeamStripKernelProjector2D.h"
 #include "astra/ParallelBeamDistanceDrivenProjector2D.h"
@@ -47,6 +51,7 @@
 #ifdef ASTRA_CUDA
 #include <cuda_runtime.h>
 #include "astra/cuda/2d/astra.h"
+#include "astra/cuda/2d/mem2d.h"
 #include "astra/cuda/2d/fbp.h"
 #include "astra/cuda/2d/sart.h"
 #include "astra/cuda/2d/darthelper.h"
@@ -188,6 +193,8 @@ public:
 #include <cuda_runtime.h>
 class BorrowedCudaSartAlgorithm : public astra::CCudaSartAlgorithm {
 public:
+	bool m_bBuffersAllocated = false;
+
 	bool initializeWithOptions(astra::CFloat32ProjectionData2D* sinogram,
 	                           astra::CFloat32VolumeData2D* reconstruction,
 	                           float relaxation,
@@ -204,45 +211,72 @@ public:
 		}
 		m_fLambda = relaxation;
 		setGPUIndex(gpu_index);
-		m_iDetectorSuperSampling = detector_supersampling;
-		m_iPixelSuperSampling = pixel_supersampling;
+		m_params.iRaysPerDet = detector_supersampling;
+		m_params.iRaysPerPixelDim = pixel_supersampling;
 
-		astraCUDA::SART* sart = dynamic_cast<astraCUDA::SART*>(m_pAlgo);
-		if (!sart) {
-			return false;
-		}
-
-		std::vector<int> order;
 		if (projection_order_mode == 1) {
-			order.resize(angle_count);
+			m_projectionOrder.resize(angle_count);
 			for (int i = 0; i < angle_count; ++i) {
-				order[i] = i;
+				m_projectionOrder[i] = i;
 			}
 		} else if (projection_order_mode == 0) {
-			order.resize(angle_count);
+			m_projectionOrder.resize(angle_count);
 			for (int i = 0; i < angle_count; ++i) {
-				order[i] = i;
+				m_projectionOrder[i] = i;
 			}
 			for (int i = 0; i < angle_count - 1; ++i) {
 				const int k = std::rand() % (angle_count - i);
-				const int t = order[i];
-				order[i] = order[i + k];
-				order[i + k] = t;
+				const int t = m_projectionOrder[i];
+				m_projectionOrder[i] = m_projectionOrder[i + k];
+				m_projectionOrder[i + k] = t;
 			}
 		} else {
-			order.assign(projection_order, projection_order + projection_order_length);
+			m_projectionOrder.assign(projection_order, projection_order + projection_order_length);
 		}
 
-		if (!sart->setProjectionOrder(order.data(), static_cast<int>(order.size()))) {
+		m_iIteration = 0;
+		m_bBuffersAllocated = false;
+		return true;
+	}
+
+	// In upstream v2.5.0, allocateBuffers() allocates GPU mask/constraint buffers
+	// only if m_bUseReconstructionMask / m_bUseSinogramMask are set. Since masks or
+	// constraints may be configured after initializeWithOptions() (e.g. DART),
+	// we defer buffer reallocation to the first run() call to prevent null-pointer segfaults.
+	bool run(int iterations) override
+	{
+		if (!m_bBuffersAllocated) {
+			freeBuffers();
+			if (!allocateBuffers()) {
+				return false;
+			}
+			m_bBuffersAllocated = true;
+		}
+		return astra::CCudaSartAlgorithm::run(iterations);
+	}
+};
+
+class BorrowedCudaForwardProjectionAlgorithm : public astra::CCudaForwardProjectionAlgorithm {
+public:
+	bool initializeWithOptions(astra::CProjector2D* projector,
+	                           astra::CFloat32VolumeData2D* volume,
+	                           astra::CFloat32ProjectionData2D* sinogram,
+	                           int gpu_index,
+	                           int detector_supersampling)
+	{
+		if (!astra::CCudaForwardProjectionAlgorithm::initialize(projector, volume, sinogram)) {
 			return false;
 		}
-
+		setGPUIndex(gpu_index);
+		m_iDetectorSuperSampling = detector_supersampling;
 		return true;
 	}
 };
 
 class BorrowedCudaSirtAlgorithm : public astra::CCudaSirtAlgorithm {
 public:
+	bool m_bBuffersAllocated = false;
+
 	bool initializeWithOptions(astra::CFloat32ProjectionData2D* sinogram,
 	                           astra::CFloat32VolumeData2D* reconstruction,
 	                           float relaxation,
@@ -255,9 +289,25 @@ public:
 		}
 		m_fLambda = relaxation;
 		setGPUIndex(gpu_index);
-		m_iDetectorSuperSampling = detector_supersampling;
-		m_iPixelSuperSampling = pixel_supersampling;
+		m_params.iRaysPerDet = detector_supersampling;
+		m_params.iRaysPerPixelDim = pixel_supersampling;
+		m_bBuffersAllocated = false;
 		return true;
+	}
+
+	// In upstream v2.5.0, CCudaSirtAlgorithm does not allocate buffers during initialize().
+	// Furthermore, mask buffers are only created when masks are present.
+	// Defer buffer allocation to the first run() to ensure all masks/constraints are accounted for.
+	bool run(int iterations) override
+	{
+		if (!m_bBuffersAllocated) {
+			freeBuffers();
+			if (!allocateBuffers()) {
+				return false;
+			}
+			m_bBuffersAllocated = true;
+		}
+		return astra::CCudaSirtAlgorithm::run(iterations);
 	}
 };
 
@@ -272,15 +322,17 @@ public:
 		if (!astra::CCudaBackProjectionAlgorithm::initialize(nullptr, sinogram, reconstruction)) {
 			return false;
 		}
-		m_iGPUIndex = gpu_index;
-		m_iDetectorSuperSampling = detector_supersampling;
-		m_iPixelSuperSampling = pixel_supersampling;
+		setGPUIndex(gpu_index);
+		m_params.iRaysPerDet = detector_supersampling;
+		m_params.iRaysPerPixelDim = pixel_supersampling;
 		return true;
 	}
 };
 
 class BorrowedCudaCglsAlgorithm : public astra::CCudaCglsAlgorithm {
 public:
+	bool m_bBuffersAllocated = false;
+
 	bool initializeWithOptions(astra::CFloat32ProjectionData2D* sinogram,
 	                           astra::CFloat32VolumeData2D* reconstruction,
 	                           int gpu_index,
@@ -290,15 +342,32 @@ public:
 		if (!astra::CCudaCglsAlgorithm::initialize(nullptr, sinogram, reconstruction)) {
 			return false;
 		}
-		m_iGPUIndex = gpu_index;
-		m_iDetectorSuperSampling = detector_supersampling;
-		m_iPixelSuperSampling = pixel_supersampling;
+		setGPUIndex(gpu_index);
+		m_params.iRaysPerDet = detector_supersampling;
+		m_params.iRaysPerPixelDim = pixel_supersampling;
+		m_bBuffersAllocated = false;
 		return true;
+	}
+
+	// Defer buffer allocation to first run() to ensure mask buffers (D_volMaskData)
+	// are properly allocated if setReconstructionMask() was called after initializeWithOptions().
+	bool run(int iterations) override
+	{
+		if (!m_bBuffersAllocated) {
+			freeBuffers();
+			if (!allocateBuffers()) {
+				return false;
+			}
+			m_bBuffersAllocated = true;
+		}
+		return astra::CCudaCglsAlgorithm::run(iterations);
 	}
 };
 
 class BorrowedCudaEMAlgorithm : public astra::CCudaEMAlgorithm {
 public:
+	bool m_bBuffersAllocated = false;
+
 	bool initializeWithOptions(astra::CFloat32ProjectionData2D* sinogram,
 	                           astra::CFloat32VolumeData2D* reconstruction,
 	                           int gpu_index,
@@ -308,15 +377,31 @@ public:
 		if (!astra::CCudaEMAlgorithm::initialize(nullptr, sinogram, reconstruction)) {
 			return false;
 		}
-		m_iGPUIndex = gpu_index;
-		m_iDetectorSuperSampling = detector_supersampling;
-		m_iPixelSuperSampling = pixel_supersampling;
+		setGPUIndex(gpu_index);
+		m_params.iRaysPerDet = detector_supersampling;
+		m_params.iRaysPerPixelDim = pixel_supersampling;
+		m_bBuffersAllocated = false;
 		return true;
+	}
+
+	// Defer buffer allocation to first run() for consistent lifecycle and mask support.
+	bool run(int iterations) override
+	{
+		if (!m_bBuffersAllocated) {
+			freeBuffers();
+			if (!allocateBuffers()) {
+				return false;
+			}
+			m_bBuffersAllocated = true;
+		}
+		return astra::CCudaEMAlgorithm::run(iterations);
 	}
 };
 
 class BorrowedCudaSirtAlgorithm3D : public astra::CCudaSirtAlgorithm3D {
 public:
+	bool m_bBuffersAllocated = false;
+
 	bool initializeWithOptions(astra::CFloat32ProjectionData3D* sinogram,
 	                           astra::CFloat32VolumeData3D* reconstruction,
 	                           float relaxation,
@@ -327,16 +412,33 @@ public:
 		if (!astra::CCudaSirtAlgorithm3D::initialize(nullptr, sinogram, reconstruction)) {
 			return false;
 		}
-		m_fLambda = relaxation;
-		m_iGPUIndex = gpu_index;
-		m_iVoxelSuperSampling = voxel_supersampling;
-		m_iDetectorSuperSampling = detector_supersampling;
+		m_fRelaxation = relaxation;
+		setGPUIndex(gpu_index);
+		m_params.iRaysPerVoxelDim = voxel_supersampling;
+		m_params.iRaysPerDetDim = detector_supersampling;
+		m_bBuffersAllocated = false;
 		return true;
+	}
+
+	// Defer buffer reallocation to first run() to ensure 3D mask buffers
+	// (D_volMaskData, D_projMaskData) are allocated if masks were set after initialize.
+	bool run(int iterations) override
+	{
+		if (!m_bBuffersAllocated) {
+			freeBuffers();
+			if (!allocateBuffers()) {
+				return false;
+			}
+			m_bBuffersAllocated = true;
+		}
+		return astra::CCudaSirtAlgorithm3D::run(iterations);
 	}
 };
 
 class BorrowedCudaCglsAlgorithm3D : public astra::CCudaCglsAlgorithm3D {
 public:
+	bool m_bBuffersAllocated = false;
+
 	bool initializeWithOptions(astra::CFloat32ProjectionData3D* sinogram,
 	                           astra::CFloat32VolumeData3D* reconstruction,
 	                           int gpu_index,
@@ -346,10 +448,24 @@ public:
 		if (!astra::CCudaCglsAlgorithm3D::initialize(nullptr, sinogram, reconstruction)) {
 			return false;
 		}
-		m_iGPUIndex = gpu_index;
-		m_iVoxelSuperSampling = voxel_supersampling;
-		m_iDetectorSuperSampling = detector_supersampling;
+		setGPUIndex(gpu_index);
+		m_params.iRaysPerVoxelDim = voxel_supersampling;
+		m_params.iRaysPerDetDim = detector_supersampling;
+		m_bBuffersAllocated = false;
 		return true;
+	}
+
+	// Defer buffer reallocation to first run() to ensure 3D mask buffers are allocated.
+	bool run(int iterations) override
+	{
+		if (!m_bBuffersAllocated) {
+			freeBuffers();
+			if (!allocateBuffers()) {
+				return false;
+			}
+			m_bBuffersAllocated = true;
+		}
+		return astra::CCudaCglsAlgorithm3D::run(iterations);
 	}
 };
 
@@ -366,7 +482,7 @@ public:
 		        nullptr, sinogram, reconstruction, filter_config, short_scan)) {
 			return false;
 		}
-		m_iGPUIndex = gpu_index;
+		setGPUIndices(gpu_index >= 0 ? std::vector<int>{gpu_index} : std::vector<int>{});
 		m_iVoxelSuperSampling = voxel_supersampling;
 		return true;
 	}
@@ -386,9 +502,26 @@ public:
 		m_projectionKernel = projection_kernel;
 		m_iVoxelSuperSampling = voxel_supersampling;
 		m_iDetectorSuperSampling = detector_supersampling;
-		m_iGPUIndex = gpu_index;
+		m_GPUIndices = (gpu_index >= 0 ? std::vector<int>{gpu_index} : std::vector<int>{});
 		m_bIsInitialized = _check();
 		return m_bIsInitialized;
+	}
+};
+
+class BorrowedCudaBackProjectionAlgorithm3D : public astra::CCudaBackProjectionAlgorithm3D {
+public:
+	bool initializeWithOptions(astra::CProjector3D* projector,
+	                           astra::CFloat32ProjectionData3D* sinogram,
+	                           astra::CFloat32VolumeData3D* volume,
+	                           int gpu_index,
+	                           int voxel_supersampling)
+	{
+		if (!astra::CCudaBackProjectionAlgorithm3D::initialize(projector, sinogram, volume)) {
+			return false;
+		}
+		setGPUIndices(gpu_index >= 0 ? std::vector<int>{gpu_index} : std::vector<int>{});
+		m_iVoxelSuperSampling = voxel_supersampling;
+		return true;
 	}
 };
 #endif
@@ -1032,30 +1165,76 @@ bool run_cuda_fbp_2d(astra::CVolumeGeometry2D& volume_geometry,
 		return false;
 	}
 
-	astraCUDA::FBP algorithm;
-	bool ok = true;
-	ok &= algorithm.setGPUIndex(gpu_index);
-	ok &= algorithm.setGeometry(&volume_geometry, &projection_geometry);
-	ok &= algorithm.setSuperSampling(1, 1);
-	ok &= algorithm.init();
-	ok &= algorithm.setFilter(filter_config);
-	ok &= algorithm.setShortScan(short_scan);
-	ok &= algorithm.setReconstructionScale(1.0f / volume_geometry.getPixelArea());
-	ok &= algorithm.allocateBuffers();
-	ok &= algorithm.copyDataToGPU(
-	    sinogram,
-	    projection_geometry.getDetectorCount(),
-	    volume,
-	    volume_geometry.getGridColCount(),
-	    nullptr,
-	    0,
-	    nullptr,
-	    0);
-	ok &= algorithm.iterate(1);
-	ok &= algorithm.getReconstruction(volume, volume_geometry.getGridColCount());
+	if (gpu_index != -1) astraCUDA::setGPUIndex(gpu_index);
+
+	astra::Geometry2DParameters geom_params = astra::convertAstraGeometry(&volume_geometry, &projection_geometry);
+	if (!geom_params.isValid()) {
+		g_last_error = "failed to convert geometry";
+		return false;
+	}
+
+	if (!astra::checkCustomFilterSize(filter_config, projection_geometry)) {
+		g_last_error = "custom filter size mismatch for given projection geometry";
+		return false;
+	}
+
+	astraCUDA::SFilter_internal* filter = astraCUDA::prepareFilter(filter_config, geom_params.getDims());
+	if (!filter) {
+		g_last_error = "failed to prepare filter";
+		return false;
+	}
+
+	std::array<int, 2> volDims = volume_data.getShape();
+	std::array<int, 2> projDims = sinogram_data.getShape();
+
+	astra::CDataStorage* s_vol = astraCUDA::allocateGPUMemory(volDims[0], volDims[1], astraCUDA::INIT_NO);
+	if (!s_vol) {
+		astraCUDA::freeFilter(filter);
+		g_last_error = "failed to allocate volume GPU memory";
+		return false;
+	}
+	astra::CData2D* D_volData = new astra::CData2D(volDims[0], volDims[1], s_vol);
+
+	astra::CDataStorage* s_proj = astraCUDA::allocateGPUMemory(projDims[0], projDims[1], astraCUDA::INIT_NO);
+	if (!s_proj) {
+		astraCUDA::freeGPUMemory(D_volData); delete D_volData;
+		astraCUDA::freeFilter(filter);
+		g_last_error = "failed to allocate sinogram GPU memory";
+		return false;
+	}
+	astra::CData2D* D_projData = new astra::CData2D(projDims[0], projDims[1], s_proj);
+
+	bool ok = astraCUDA::copyToGPUMemory(&sinogram_data, D_projData);
+	if (!ok) {
+		g_last_error = "failed to copy sinogram to GPU";
+	}
+
+	astraCUDA::SProjectorParams2D params;
+	params.iRaysPerDet = 1;
+	params.iRaysPerPixelDim = 1;
+	params.fOutputScale = geom_params.getOutputScale() / volume_geometry.getPixelArea();
+
+	if (ok) {
+		ok = astraCUDA::FBP(D_volData, D_projData, geom_params, params, filter, short_scan);
+		if (!ok) {
+			g_last_error = "CUDA FBP execution failed";
+		}
+	}
+	if (ok) {
+		ok = astraCUDA::copyFromGPUMemory(&volume_data, D_volData);
+		if (!ok) {
+			g_last_error = "failed to copy reconstruction from GPU";
+		}
+	}
+
+	astraCUDA::freeGPUMemory(D_volData); delete D_volData;
+	astraCUDA::freeGPUMemory(D_projData); delete D_projData;
+	astraCUDA::freeFilter(filter);
 
 	if (!ok) {
-		g_last_error = "CUDA FBP execution failed";
+		if (g_last_error.empty()) {
+			g_last_error = "CUDA FBP execution failed";
+		}
 		return false;
 	}
 	return true;
@@ -2162,41 +2341,18 @@ extern "C" int astra_julia_cuda_fp2d_parallel_line_f32(
 			return 0;
 		}
 
-		astraCUDA::SParProjection* par_projections = nullptr;
-		astraCUDA::SFanProjection* fan_projections = nullptr;
-		float output_scale = 1.0f;
-		const bool ok_geometry = astra::convertAstraGeometry(
-		    &volume_geometry,
-		    static_cast<const astra::CProjectionGeometry2D*>(&projection_geometry),
-		    par_projections,
-		    fan_projections,
-		    output_scale);
-		if (!ok_geometry) {
-			g_last_error = "failed to convert ASTRA geometry for CUDA";
+		astra::CFloat32VolumeData2D volume_data(
+		    volume_geometry, new BorrowedFloat32Memory(const_cast<float*>(volume)));
+		astra::CFloat32ProjectionData2D sinogram_data(
+		    projection_geometry, new BorrowedFloat32Memory(sinogram));
+
+		BorrowedCudaForwardProjectionAlgorithm algo;
+		if (!algo.initializeWithOptions(nullptr, &volume_data, &sinogram_data, gpu_index, detector_supersampling)) {
+			g_last_error = "failed to initialize CUDA forward projection";
 			return 0;
 		}
-		if (!par_projections || fan_projections) {
-			delete[] par_projections;
-			delete[] fan_projections;
-			g_last_error = "unexpected CUDA geometry conversion result";
-			return 0;
-		}
-
-		const bool ok = astra::astraCudaFP(
-		    volume,
-		    sinogram,
-		    static_cast<unsigned int>(volume_width),
-		    static_cast<unsigned int>(volume_height),
-		    static_cast<unsigned int>(angle_count),
-		    static_cast<unsigned int>(detector_count),
-		    par_projections,
-		    static_cast<unsigned int>(detector_supersampling),
-		    output_scale,
-		    gpu_index);
-		delete[] par_projections;
-
-		if (!ok) {
-			g_last_error = "astraCudaFP failed";
+		if (!algo.run(1)) {
+			g_last_error = "CUDA forward projection execution failed";
 			return 0;
 		}
 		return 1;
@@ -2533,37 +2689,18 @@ extern "C" int astra_julia_cuda_fp2d_parallel_vec_f32(
 			return 0;
 		}
 
-		astraCUDA::SParProjection* par_projections = nullptr;
-		float output_scale = 1.0f;
-		const bool ok_geometry = astra::convertAstraGeometry(
-		    &volume_geometry,
-		    &projection_geometry,
-		    par_projections,
-		    output_scale);
-		if (!ok_geometry) {
-			g_last_error = "failed to convert ASTRA parallel vec geometry for CUDA";
+		astra::CFloat32VolumeData2D volume_data(
+		    volume_geometry, new BorrowedFloat32Memory(const_cast<float*>(volume)));
+		astra::CFloat32ProjectionData2D sinogram_data(
+		    projection_geometry, new BorrowedFloat32Memory(sinogram));
+
+		BorrowedCudaForwardProjectionAlgorithm algo;
+		if (!algo.initializeWithOptions(nullptr, &volume_data, &sinogram_data, gpu_index, detector_supersampling)) {
+			g_last_error = "failed to initialize CUDA parallel vec forward projection";
 			return 0;
 		}
-		if (!par_projections) {
-			g_last_error = "CUDA parallel vec geometry conversion returned null";
-			return 0;
-		}
-
-		const bool ok = astra::astraCudaFP(
-		    volume,
-		    sinogram,
-		    static_cast<unsigned int>(volume_width),
-		    static_cast<unsigned int>(volume_height),
-		    static_cast<unsigned int>(angle_count),
-		    static_cast<unsigned int>(detector_count),
-		    par_projections,
-		    static_cast<unsigned int>(detector_supersampling),
-		    output_scale,
-		    gpu_index);
-		delete[] par_projections;
-
-		if (!ok) {
-			g_last_error = "astraCudaFP failed for parallel_vec";
+		if (!algo.run(1)) {
+			g_last_error = "CUDA parallel vec forward projection execution failed";
 			return 0;
 		}
 		return 1;
@@ -3003,37 +3140,18 @@ extern "C" int astra_julia_cuda_fp2d_fanflat_f32(
 			return 0;
 		}
 
-		astraCUDA::SFanProjection* fan_projections = nullptr;
-		float output_scale = 1.0f;
-		const bool ok_geometry = astra::convertAstraGeometry(
-		    &volume_geometry,
-		    &projection_geometry,
-		    fan_projections,
-		    output_scale);
-		if (!ok_geometry) {
-			g_last_error = "failed to convert ASTRA fanflat geometry for CUDA";
+		astra::CFloat32VolumeData2D volume_data(
+		    volume_geometry, new BorrowedFloat32Memory(const_cast<float*>(volume)));
+		astra::CFloat32ProjectionData2D sinogram_data(
+		    projection_geometry, new BorrowedFloat32Memory(sinogram));
+
+		BorrowedCudaForwardProjectionAlgorithm algo;
+		if (!algo.initializeWithOptions(nullptr, &volume_data, &sinogram_data, gpu_index, detector_supersampling)) {
+			g_last_error = "failed to initialize CUDA fanflat forward projection";
 			return 0;
 		}
-		if (!fan_projections) {
-			g_last_error = "CUDA fanflat geometry conversion returned null";
-			return 0;
-		}
-
-		const bool ok = astra::astraCudaFanFP(
-		    volume,
-		    sinogram,
-		    static_cast<unsigned int>(volume_width),
-		    static_cast<unsigned int>(volume_height),
-		    static_cast<unsigned int>(angle_count),
-		    static_cast<unsigned int>(detector_count),
-		    fan_projections,
-		    static_cast<unsigned int>(detector_supersampling),
-		    output_scale,
-		    gpu_index);
-		delete[] fan_projections;
-
-		if (!ok) {
-			g_last_error = "astraCudaFanFP failed";
+		if (!algo.run(1)) {
+			g_last_error = "CUDA fanflat forward projection execution failed";
 			return 0;
 		}
 		return 1;
@@ -3300,37 +3418,18 @@ extern "C" int astra_julia_cuda_fp2d_fanflat_vec_f32(
 			return 0;
 		}
 
-		astraCUDA::SFanProjection* fan_projections = nullptr;
-		float output_scale = 1.0f;
-		const bool ok_geometry = astra::convertAstraGeometry(
-		    &volume_geometry,
-		    &projection_geometry,
-		    fan_projections,
-		    output_scale);
-		if (!ok_geometry) {
-			g_last_error = "failed to convert ASTRA fanflat vec geometry for CUDA";
+		astra::CFloat32VolumeData2D volume_data(
+		    volume_geometry, new BorrowedFloat32Memory(const_cast<float*>(volume)));
+		astra::CFloat32ProjectionData2D sinogram_data(
+		    projection_geometry, new BorrowedFloat32Memory(sinogram));
+
+		BorrowedCudaForwardProjectionAlgorithm algo;
+		if (!algo.initializeWithOptions(nullptr, &volume_data, &sinogram_data, gpu_index, detector_supersampling)) {
+			g_last_error = "failed to initialize CUDA fanflat vec forward projection";
 			return 0;
 		}
-		if (!fan_projections) {
-			g_last_error = "CUDA fanflat vec geometry conversion returned null";
-			return 0;
-		}
-
-		const bool ok = astra::astraCudaFanFP(
-		    volume,
-		    sinogram,
-		    static_cast<unsigned int>(volume_width),
-		    static_cast<unsigned int>(volume_height),
-		    static_cast<unsigned int>(angle_count),
-		    static_cast<unsigned int>(detector_count),
-		    fan_projections,
-		    static_cast<unsigned int>(detector_supersampling),
-		    output_scale,
-		    gpu_index);
-		delete[] fan_projections;
-
-		if (!ok) {
-			g_last_error = "astraCudaFanFP failed for fanflat_vec";
+		if (!algo.run(1)) {
+			g_last_error = "CUDA fanflat vec forward projection execution failed";
 			return 0;
 		}
 		return 1;
@@ -5525,15 +5624,18 @@ extern "C" int astra_julia_cuda_bp3d_parallel_f32(
 			return 0;
 		}
 
-		const bool ok = astra::astraCudaBP(
-		    volume,
-		    sinogram,
-		    &volume_geometry,
-		    &projection_geometry,
-		    gpu_index,
-		    voxel_supersampling);
-		if (!ok) {
-			g_last_error = "3D parallel astraCudaBP failed";
+		astra::CFloat32VolumeData3D volume_data(
+		    volume_geometry, new BorrowedFloat32Memory(volume));
+		astra::CFloat32ProjectionData3D sinogram_data(
+		    projection_geometry, new BorrowedFloat32Memory(const_cast<float*>(sinogram)));
+
+		BorrowedCudaBackProjectionAlgorithm3D algo;
+		if (!algo.initializeWithOptions(nullptr, &sinogram_data, &volume_data, gpu_index, voxel_supersampling)) {
+			g_last_error = "failed to initialize 3D parallel CUDA backprojection";
+			return 0;
+		}
+		if (!algo.run(1)) {
+			g_last_error = "3D parallel CUDA backprojection execution failed";
 			return 0;
 		}
 		return 1;
@@ -5613,16 +5715,19 @@ extern "C" int astra_julia_cuda_fp3d_parallel_vec_f32(
 			return 0;
 		}
 
-		const bool ok = astra::astraCudaFP(
-		    volume,
-		    sinogram,
-		    &volume_geometry,
-		    &projection_geometry,
-		    gpu_index,
-		    1,
-		    astra::ker3d_default);
-		if (!ok) {
-			g_last_error = "3D parallel vec astraCudaFP failed";
+		astra::CFloat32VolumeData3D volume_data(
+		    volume_geometry, new BorrowedFloat32Memory(const_cast<float*>(volume)));
+		astra::CFloat32ProjectionData3D sinogram_data(
+		    projection_geometry, new BorrowedFloat32Memory(sinogram));
+
+		astra::CCudaForwardProjectionAlgorithm3D algo;
+		std::vector<int> gpu_indices = (gpu_index >= 0 ? std::vector<int>{gpu_index} : std::vector<int>{});
+		if (!algo.initialize(nullptr, &sinogram_data, &volume_data, gpu_indices, 1)) {
+			g_last_error = "failed to initialize 3D parallel vec CUDA forward projection";
+			return 0;
+		}
+		if (!algo.run(1)) {
+			g_last_error = "3D parallel vec CUDA forward projection execution failed";
 			return 0;
 		}
 		return 1;
@@ -5701,15 +5806,18 @@ extern "C" int astra_julia_cuda_bp3d_parallel_vec_f32(
 			return 0;
 		}
 
-		const bool ok = astra::astraCudaBP(
-		    volume,
-		    sinogram,
-		    &volume_geometry,
-		    &projection_geometry,
-		    gpu_index,
-		    voxel_supersampling);
-		if (!ok) {
-			g_last_error = "3D parallel vec astraCudaBP failed";
+		astra::CFloat32VolumeData3D volume_data(
+		    volume_geometry, new BorrowedFloat32Memory(volume));
+		astra::CFloat32ProjectionData3D sinogram_data(
+		    projection_geometry, new BorrowedFloat32Memory(const_cast<float*>(sinogram)));
+
+		BorrowedCudaBackProjectionAlgorithm3D algo;
+		if (!algo.initializeWithOptions(nullptr, &sinogram_data, &volume_data, gpu_index, voxel_supersampling)) {
+			g_last_error = "failed to initialize 3D parallel vec CUDA backprojection";
+			return 0;
+		}
+		if (!algo.run(1)) {
+			g_last_error = "3D parallel vec CUDA backprojection execution failed";
 			return 0;
 		}
 		return 1;
@@ -5801,16 +5909,19 @@ extern "C" int astra_julia_cuda_fp3d_cone_f32(
 			return 0;
 		}
 
-		const bool ok = astra::astraCudaFP(
-		    volume,
-		    sinogram,
-		    &volume_geometry,
-		    &projection_geometry,
-		    gpu_index,
-		    detector_supersampling,
-		    astra::ker3d_default);
-		if (!ok) {
-			g_last_error = "3D cone astraCudaFP failed";
+		astra::CFloat32VolumeData3D volume_data(
+		    volume_geometry, new BorrowedFloat32Memory(const_cast<float*>(volume)));
+		astra::CFloat32ProjectionData3D sinogram_data(
+		    projection_geometry, new BorrowedFloat32Memory(sinogram));
+
+		astra::CCudaForwardProjectionAlgorithm3D algo;
+		std::vector<int> gpu_indices = (gpu_index >= 0 ? std::vector<int>{gpu_index} : std::vector<int>{});
+		if (!algo.initialize(nullptr, &sinogram_data, &volume_data, gpu_indices, detector_supersampling)) {
+			g_last_error = "failed to initialize 3D cone CUDA forward projection";
+			return 0;
+		}
+		if (!algo.run(1)) {
+			g_last_error = "3D cone CUDA forward projection execution failed";
 			return 0;
 		}
 		return 1;
@@ -5906,15 +6017,18 @@ extern "C" int astra_julia_cuda_bp3d_cone_f32(
 			return 0;
 		}
 
-		const bool ok = astra::astraCudaBP(
-		    volume,
-		    sinogram,
-		    &volume_geometry,
-		    &projection_geometry,
-		    gpu_index,
-		    voxel_supersampling);
-		if (!ok) {
-			g_last_error = "3D cone astraCudaBP failed";
+		astra::CFloat32VolumeData3D volume_data(
+		    volume_geometry, new BorrowedFloat32Memory(volume));
+		astra::CFloat32ProjectionData3D sinogram_data(
+		    projection_geometry, new BorrowedFloat32Memory(const_cast<float*>(sinogram)));
+
+		BorrowedCudaBackProjectionAlgorithm3D algo;
+		if (!algo.initializeWithOptions(nullptr, &sinogram_data, &volume_data, gpu_index, voxel_supersampling)) {
+			g_last_error = "failed to initialize 3D cone CUDA backprojection";
+			return 0;
+		}
+		if (!algo.run(1)) {
+			g_last_error = "3D cone CUDA backprojection execution failed";
 			return 0;
 		}
 		return 1;
@@ -5998,16 +6112,19 @@ extern "C" int astra_julia_cuda_fp3d_cone_vec_f32(
 			return 0;
 		}
 
-		const bool ok = astra::astraCudaFP(
-		    volume,
-		    sinogram,
-		    &volume_geometry,
-		    &projection_geometry,
-		    gpu_index,
-		    detector_supersampling,
-		    astra::ker3d_default);
-		if (!ok) {
-			g_last_error = "3D cone vec astraCudaFP failed";
+		astra::CFloat32VolumeData3D volume_data(
+		    volume_geometry, new BorrowedFloat32Memory(const_cast<float*>(volume)));
+		astra::CFloat32ProjectionData3D sinogram_data(
+		    projection_geometry, new BorrowedFloat32Memory(sinogram));
+
+		astra::CCudaForwardProjectionAlgorithm3D algo;
+		std::vector<int> gpu_indices = (gpu_index >= 0 ? std::vector<int>{gpu_index} : std::vector<int>{});
+		if (!algo.initialize(nullptr, &sinogram_data, &volume_data, gpu_indices, detector_supersampling)) {
+			g_last_error = "failed to initialize 3D cone vec CUDA forward projection";
+			return 0;
+		}
+		if (!algo.run(1)) {
+			g_last_error = "3D cone vec CUDA forward projection execution failed";
 			return 0;
 		}
 		return 1;
@@ -6087,15 +6204,18 @@ extern "C" int astra_julia_cuda_bp3d_cone_vec_f32(
 			return 0;
 		}
 
-		const bool ok = astra::astraCudaBP(
-		    volume,
-		    sinogram,
-		    &volume_geometry,
-		    &projection_geometry,
-		    gpu_index,
-		    voxel_supersampling);
-		if (!ok) {
-			g_last_error = "3D cone vec astraCudaBP failed";
+		astra::CFloat32VolumeData3D volume_data(
+		    volume_geometry, new BorrowedFloat32Memory(volume));
+		astra::CFloat32ProjectionData3D sinogram_data(
+		    projection_geometry, new BorrowedFloat32Memory(const_cast<float*>(sinogram)));
+
+		BorrowedCudaBackProjectionAlgorithm3D algo;
+		if (!algo.initializeWithOptions(nullptr, &sinogram_data, &volume_data, gpu_index, voxel_supersampling)) {
+			g_last_error = "failed to initialize 3D cone vec CUDA backprojection";
+			return 0;
+		}
+		if (!algo.run(1)) {
+			g_last_error = "3D cone vec CUDA backprojection execution failed";
 			return 0;
 		}
 		return 1;

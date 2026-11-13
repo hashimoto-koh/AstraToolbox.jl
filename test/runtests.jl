@@ -1143,6 +1143,69 @@ end
     @test bbox_t == bbox_1
 end
 
+@testset "Upstream v2.5.0 enhancement tests" begin
+    # 1. FDK filter config validation (error on invalid filter_d or missing custom filter)
+    cone_geom = Cone3DGeometry(Float32[0.0, 0.5, 1.0], 8, 8, 1.0f0, 1.0f0, 100.0f0, 50.0f0)
+    sino_cone = zeros(Float32, 8, 3, 8)
+    if cuda_available
+        # Invalid filter_d
+        @test_throws ErrorException reconstruct(
+            sino_cone, cone_geom, FDK3DMethod(filter_d=-1.0f0);
+            volume_size=(8, 8, 8), backend=cuda()
+        )
+        # Custom filter type without custom_filter pointer
+        @test_throws ErrorException reconstruct(
+            sino_cone, cone_geom, FDK3DMethod(filter_type=FILTER_PROJECTION, custom_filter=nothing);
+            volume_size=(8, 8, 8), backend=cuda()
+        )
+    end
 
+    # 2. EM algorithm residual norm and input preservation
+    vol2 = zeros(Float32, 16, 16)
+    vol2[5:12, 5:12] .= 1.0f0
+    geom2 = Parallel2DGeometry(range(0.0f0, Float32(pi), length=16); detector_count=16)
+    sino2 = project(vol2, geom2; backend=cuda_available ? cuda() : cpu())
+    sino2_copy = copy(sino2)
+    if cuda_available
+        res_norm = Ref(0.0f0)
+        rec_em = reconstruct(
+            sino2, geom2, EMMethod(iterations=5);
+            volume_size=(16, 16), backend=cuda(), residual_norm=res_norm
+        )
+        @test sino2 == sino2_copy  # Ensure input was not mutated / corrupted
+        @test res_norm[] >= 0.0f0
+        @test all(isfinite, rec_em)
+    end
 
+    # 3. FBP 2D short scan and custom filter test
+    if cuda_available
+        # Short scan FBP with FanFlat2DGeometry
+        fan_angles = Float32.(range(0, pi + 2 * atan(0.5f0), length=16))
+        fan_geom = FanFlat2DGeometry(fan_angles, 16, 1.0f0, 200.0f0, 100.0f0)
+        sino_fan = project(vol2, fan_geom; backend=cuda())
+        rec_short = reconstruct(
+            sino_fan, fan_geom, FBPMethod(short_scan=true);
+            volume_size=(16, 16), backend=cuda()
+        )
+        @test all(isfinite, rec_short)
 
+        # Custom filter FBP with FILTER_PROJECTION (for det_count=16, half FFT size is 17)
+        cf = ones(Float32, 17, 1)
+        rec_cf = reconstruct(
+            sino2, geom2, FBPMethod(filter_type=FILTER_PROJECTION, custom_filter=cf);
+            volume_size=(16, 16), backend=cuda()
+        )
+        @test all(isfinite, rec_cf)
+
+        # Custom filter dimension mismatch check
+        cf_bad = ones(Float32, 10, 1)
+        @test_throws ErrorException reconstruct(
+            sino2, geom2, FBPMethod(filter_type=FILTER_PROJECTION, custom_filter=cf_bad);
+            volume_size=(16, 16), backend=cuda()
+        )
+    end
+
+    # 4. fanflat BP CUDA 2560 angles guard note:
+    # Large angle count (>2560) fanflat backprojection requires substantial GPU memory (>8GB),
+    # verified upstream; excluded from lightweight CI suite to prevent runner OOM.
+end

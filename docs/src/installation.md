@@ -9,8 +9,8 @@ The current version of `AstraToolbox.jl` is primarily developed and tested on Li
 ### Software Requirements
 
 - **Julia 1.11** or higher.
-- **C/C++ compiler toolchain**: `gcc`, `g++`, `make`, `autoconf`, `automake`, `libtool`.
-- **CUDA Toolkit**: Required for the `cuda()` backend. Ensure `nvcc` is on your path or set the `ASTRATOOLBOXJL_CUDA` environment variable.
+- **C/C++ compiler toolchain**: C++17 compliant compiler (`g++ >= 7` or `clang++ >= 5`), `make`, `autoconf`, `automake`, and `libtool`.
+- **NVIDIA CUDA Toolkit**: Required for building the native library (`nvcc` >= 11.0 recommended). Ensure `nvcc` is on your path or set the `ASTRATOOLBOXJL_CUDA` environment variable. *Note*: At runtime, an NVIDIA CUDA-capable GPU is required for `backend=cuda()`, while `backend=cpu()` can be used on systems without a physical GPU as long as the native library was built with the toolkit.
 
 ## Standard Installation
 
@@ -22,7 +22,7 @@ Pkg.add(url = "https://github.com/your-org/AstraToolbox.jl.git")
 ```
 
 During installation, Julia will run the `deps/build.jl` script, which will:
-1.  Clone the upstream ASTRA Toolbox source code.
+1.  Clone the upstream ASTRA Toolbox source code (pinned to release `v2.5.0`, commit `934920a46781142c2b8f0177007c395eae601783`).
 2.  Apply necessary patches for Julia compatibility.
 3.  Configure and compile the native library.
 
@@ -32,7 +32,8 @@ You can customize the build process by setting the following environment variabl
 
 - `ASTRATOOLBOXJL_CUDA`: Path to the CUDA toolkit root directory (e.g., `/usr/local/cuda`).
 - `ASTRATOOLBOXJL_ASTRA_SOURCE`: Git URL or local path to the upstream ASTRA source tree.
-- `ASTRATOOLBOXJL_ASTRA_REF`: Git ref or commit hash to check out (default is a pinned stable version).
+- `ASTRATOOLBOXJL_ASTRA_REF`: Git ref or commit hash to check out (default is `934920a46781142c2b8f0177007c395eae601783`, corresponding to `v2.5.0`).
+- `ASTRATOOLBOXJL_SOURCE_ONLY`: Set to `1` to fetch/prepare upstream sources only without compiling the library.
 - `ASTRA_JULIA_LIB`: Path to an existing `libastra.so` if you want to skip the build process and use a pre-built library.
 
 ## Troubleshooting

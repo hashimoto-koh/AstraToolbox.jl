@@ -44,7 +44,7 @@ This repository exists because the original `ASTRA Toolbox` project is an outsta
 
 This repository does **not** vendor the upstream `ASTRA Toolbox` source tree in Git.
 
-Instead, `deps/build.jl` fetches the upstream C++/CUDA sources at build time from a pinned upstream Git commit (`bd0323e9b4b243ee90bca41341927b05e6e816c8`), applies minimal integration shims and patches from `deps/wrapper/`, and compiles the shared library `libastra.so` locally on your system.
+Instead, `deps/build.jl` fetches the upstream C++/CUDA sources at build time from a pinned upstream Git commit (`934920a46781142c2b8f0177007c395eae601783`, corresponding to release `v2.5.0`), applies minimal integration shims and patches from `deps/wrapper/`, and compiles the shared library `libastra.so` locally on your system.
 
 This policy maintains a transparent, reproducible build story and a clear boundary between upstream ASTRA Toolbox and the Julia package.
 
@@ -56,24 +56,21 @@ This policy maintains a transparent, reproducible build story and a clear bounda
 
 Building `AstraToolbox.jl` requires native C++ compilation tools and autotools:
 
-- **C++ Host Compiler**: A C++11 compliant compiler (`g++` or `clang++`).
+- **C++ Host Compiler**: A C++17 compliant compiler (`g++ >= 7` or `clang++ >= 5`).
 - **Build Utilities**: `make`, `autoconf`, `automake`, and `libtool`.
 - **Git**: Required by `deps/build.jl` to clone the pinned upstream ASTRA Toolbox repository sources.
-- **NVIDIA GPU & CUDA Toolkit (Optional, for GPU acceleration)**:
-  - CUDA-capable GPU (Compute Capability 3.5 or higher recommended).
-  - NVIDIA CUDA Toolkit (`nvcc`) version 10.0 or higher.
+- **NVIDIA CUDA Toolkit (Required for native library build)**:
+  - NVIDIA CUDA Toolkit (`nvcc`) version 11.0 or higher.
   - `nvcc` should be accessible in your `PATH` (or specified via `ASTRATOOLBOXJL_CUDA`, `CUDA_ROOT`, or `CUDA_HOME`).
+  - *Note*: An NVIDIA CUDA-capable GPU (Compute Capability 3.5 or higher) is required at runtime for GPU acceleration (`backend=cuda()`), but CPU-only reconstruction (`backend=cpu()`) is supported even on machines without a physical GPU as long as the CUDA toolkit is installed for building.
 
 > [!IMPORTANT]
-> Because `AstraToolbox.jl` builds the native ASTRA C++/CUDA library (`libastra.so`) directly on your machine via `deps/build.jl`, the build tools and compiler must be installed before running `Pkg.build("AstraToolbox")`.
+> Because `AstraToolbox.jl` builds the native ASTRA C++/CUDA library (`libastra.so`) directly on your machine via `deps/build.jl`, the build tools and CUDA toolkit compiler must be installed before running `Pkg.build("AstraToolbox")`.
 
 On Ubuntu / Debian:
 ```bash
 sudo apt-get update
-sudo apt-get install -y build-essential autoconf automake libtool git
-
-# Optional: for CUDA GPU acceleration
-sudo apt-get install -y nvidia-cuda-toolkit
+sudo apt-get install -y build-essential autoconf automake libtool git nvidia-cuda-toolkit
 ```
 
 ### Standard Installation & Build
@@ -99,7 +96,7 @@ julia --startup-file=no --project=. -e 'import Pkg; Pkg.develop(path=pwd()); Pkg
 ### Build Mechanics
 
 Running `Pkg.build("AstraToolbox")` automatically performs the following steps:
-1. Clones upstream `astra-toolbox/astra-toolbox` into `deps/work/astra-toolbox` at pinned commit `bd0323e` (if not already cached).
+1. Clones upstream `astra-toolbox/astra-toolbox` into `deps/work/astra-toolbox` at pinned commit `934920a` (`v2.5.0`, if not already cached).
 2. Applies necessary upstream compatibility patches (e.g. 2D DART boundary helper fix).
 3. Installs Julia C ABI wrapper files (`julia_c_api.h` and `julia_c_api.cpp`) into upstream source tree from `deps/wrapper/`.
 4. Patches upstream Autotools `Makefile.in` to include the wrapper object `src/julia_c_api.lo`.
@@ -115,7 +112,8 @@ Running `Pkg.build("AstraToolbox")` automatically performs the following steps:
 | `ASTRATOOLBOXJL_CUDA` | Custom path to CUDA installation root directory | Detected via `CUDA_ROOT`, `CUDA_HOME`, `/usr/local/cuda`, or `nvcc` |
 | `CUDA_ROOT` / `CUDA_HOME` | Standard CUDA directory fallback | — |
 | `ASTRATOOLBOXJL_ASTRA_SOURCE` | Custom upstream repository URL or local path | `https://github.com/astra-toolbox/astra-toolbox.git` |
-| `ASTRATOOLBOXJL_ASTRA_REF` | Custom Git commit, tag, or branch to check out | `bd0323e9b4b243ee90bca41341927b05e6e816c8` |
+| `ASTRATOOLBOXJL_ASTRA_REF` | Custom Git commit, tag, or branch to check out | `934920a46781142c2b8f0177007c395eae601783` |
+| `ASTRATOOLBOXJL_SOURCE_ONLY` | Skip build and only fetch/prepare upstream sources | `0` |
 | `ASTRA_JULIA_LIB` | Runtime override path to an existing precompiled `libastra.so` | Empty (uses `deps/usr/lib/libastra.so`) |
 
 ### Library Status & GPU Inspection

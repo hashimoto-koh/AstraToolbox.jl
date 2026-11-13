@@ -50,7 +50,7 @@ If you use `AstraToolbox.jl` or the underlying ASTRA Toolbox in scientific publi
 1. **No Source Vendoring in Git History**:
    This repository does not vendor the upstream ASTRA Toolbox source tree directly in version control.
 2. **Reproducible Build-Time Fetching**:
-   During `Pkg.build("AstraToolbox")`, the build script ([`deps/build.jl`](deps/build.jl)) fetches upstream source code pinned to a verified release commit (`bd0323e9b4b243ee90bca41341927b05e6e816c8`, ASTRA 2.4.1+) and builds the native C++/CUDA shared library (`libastra.so`).
+   During `Pkg.build("AstraToolbox")`, the build script ([`deps/build.jl`](deps/build.jl)) fetches upstream source code pinned to a verified release commit (`934920a46781142c2b8f0177007c395eae601783`, ASTRA v2.5.0) and builds the native C++/CUDA shared library (`libastra.so`).
 3. **Zero-Copy Native Bridge**:
    This repository provides a lightweight C API bridge ([`deps/wrapper/include/astra/julia_c_api.h`](deps/wrapper/include/astra/julia_c_api.h) and [`deps/wrapper/src/julia_c_api.cpp`](deps/wrapper/src/julia_c_api.cpp)) that interacts with ASTRA's native C++ object managers (`CAstraObjectManager`, `CCompositeGeometryManager`).
 4. **Native Julia Integration**:
