@@ -27,7 +27,7 @@ The package uses a small C++ wrapper (`deps/wrapper/src/julia_c_api.cpp`) to bri
 ## Known Limitations
 
 - **Platform Support**: Currently only tested and supported on Linux.
-- **CUDA Requirement**: The package currently builds with CUDA enabled by default. CPU-only builds are not yet officially supported.
+- **CUDA Toolchain Requirement**: The native library build currently requires the NVIDIA CUDA Toolkit compiler (`nvcc` >= 11.0). At runtime, GPU acceleration requires an NVIDIA GPU, while CPU-based reconstructions (`backend = cpu()`) run without a physical GPU.
 
 ## Licensing
 

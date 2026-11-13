@@ -34,13 +34,20 @@ backproject!(volume, sinogram, geometry; backend = cuda())
 
 ## Projection Options
 
-For fine-grained control over the projection process, you can use `ProjectionOptions2D`, `ProjectionOptions3D`, `BackprojectionOptions2D`, or `BackprojectionOptions3D`.
+For fine-grained control over the projection and backprojection process, you can configure projection options:
 
-These options allow you to specify things like the GPU index or other backend-specific parameters.
+- `ProjectionOptions2D(; detector_supersampling = 1, projector_kernel = :line)`: Detector supersampling rate (e.g., 2, 4) and 2D CPU projector interpolation kernel (`:line`, `:linear`, `:strip`, `:distance_driven`).
+- `ProjectionOptions3D(; detector_supersampling = 1)`: 3D detector supersampling factor.
+- `BackprojectionOptions2D(; detector_supersampling = 1, pixel_supersampling = 1, projector_kernel = :line)`: 2D backprojection options.
+- `BackprojectionOptions3D(; voxel_supersampling = 1)`: 3D voxel supersampling factor.
 
 ```julia
-options = ProjectionOptions2D(gpu_index = 0)
+# 2D projection with 2x detector supersampling
+options = ProjectionOptions2D(detector_supersampling = 2, projector_kernel = :line)
 sinogram = project(volume, geometry; backend = cuda(), options = options)
+
+# Target a specific GPU device via the cuda() backend
+sinogram = project(volume, geometry; backend = cuda(gpu_index = 0))
 ```
 
 ## Internal Projector Types

@@ -8,11 +8,11 @@
 
 This geometry defines a standard parallel beam setup in 3D.
 
-- `detector_width_u::Float32`: Width of a single detector pixel in the horizontal direction.
-- `detector_width_v::Float32`: Width of a single detector pixel in the vertical direction.
-- `detector_count_u::Int32`: Number of detector pixels in the horizontal direction.
-- `detector_count_v::Int32`: Number of detector pixels in the vertical direction.
 - `angles::Vector{Float32}`: The rotation angles (in radians).
+- `detector_count_u::Integer`: Number of detector pixels in the horizontal direction.
+- `detector_count_v::Integer`: Number of detector pixels in the vertical direction.
+- `detector_spacing_u::Real`: Horizontal pixel spacing / width (defaults to `1.0f0`).
+- `detector_spacing_v::Real`: Vertical pixel spacing / width (defaults to `1.0f0`).
 
 ### `ParallelVec3DGeometry`
 
@@ -28,13 +28,13 @@ A flexible vector geometry for parallel beams in 3D.
 
 This geometry defines a cone-beam setup with a flat detector.
 
-- `detector_width_u::Float32`: Horizontal pixel width.
-- `detector_width_v::Float32`: Vertical pixel width.
-- `detector_count_u::Int32`: Horizontal pixel count.
-- `detector_count_v::Int32`: Vertical pixel count.
 - `angles::Vector{Float32}`: Rotation angles (in radians).
-- `source_origin::Float32`: Distance from the source to the origin.
-- `origin_detector::Float32`: Distance from the origin to the detector center.
+- `detector_count_u::Integer`: Horizontal pixel count.
+- `detector_count_v::Integer`: Vertical pixel count.
+- `origin_source_distance::Real`: Distance from the origin to the X-ray source.
+- `origin_detector_distance::Real`: Distance from the origin to the detector plane center.
+- `detector_spacing_u::Real`: Horizontal pixel spacing / width (defaults to `1.0f0`).
+- `detector_spacing_v::Real`: Vertical pixel spacing / width (defaults to `1.0f0`).
 
 ### `ConeVec3DGeometry`
 
@@ -48,7 +48,7 @@ A vector version of the cone-beam geometry.
 
 A vector geometry for a cone-beam setup with a cylindrical detector.
 
-- `vectors::Matrix{Float32}`: A matrix of size $12 \times N_{angles}$.
+- `vectors::Matrix{Float32}`: A matrix of size $13 \times N_{angles}$.
 - `detector_count_u::Int32`: Horizontal pixel count.
 - `detector_count_v::Int32`: Vertical pixel count.
 
@@ -61,12 +61,12 @@ Geometries are created by calling their respective constructors. For example:
 angles = range(0, 2*pi, length=360)
 geometry = Cone3DGeometry(
     angles;
-    detector_width_u=1.0,
-    detector_width_v=1.0,
-    detector_count_u=256,
-    detector_count_v=256,
-    source_origin=1000.0,
-    origin_detector=500.0
+    detector_count_u = 256,
+    detector_count_v = 256,
+    origin_source_distance = 1000.0,
+    origin_detector_distance = 500.0,
+    detector_spacing_u = 1.0,
+    detector_spacing_v = 1.0
 )
 ```
 

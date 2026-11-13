@@ -8,15 +8,22 @@
 
 Filtered Back-Projection for 2D parallel and fan-flat geometries.
 
-- `filter_type::Int`: Type of filter (e.g., `FILTER_RAMLAK`, `FILTER_SHEPPLOGAN`).
-- `custom_filter::Vector{Float32}`: An optional custom filter in the frequency domain.
+- `filter_type::Integer`: Window filter type (e.g., `FILTER_RAMLAK`, `FILTER_SHEPPLOGAN`, `FILTER_PROJECTION`, defaults to `FILTER_RAMLAK`).
+- `filter_d::Real`: Filter scaling parameter (defaults to `1.0f0`).
+- `filter_parameter::Real`: Parameter for configurable window filters such as Tukey or Kaiser (defaults to `-1.0f0`).
+- `custom_filter`: Custom frequency-domain filter array (Matrix/Vector of `Float32`) when using `FILTER_PROJECTION` or `FILTER_SINOGRAM`.
+- `short_scan::Bool`: If `true`, applies Parker weighting for fan-beam short-scan geometries covering less than $360^\circ$ (defaults to `false`).
 
 ### `FDK3DMethod` (3D)
 
 Feldkamp-Davis-Kress algorithm for 3D cone-beam reconstruction.
 
-- `filter_type::Int`: Filter type.
-- `custom_filter::Vector{Float32}`: Optional custom filter.
+- `filter_type::Integer`: Window filter type (defaults to `FILTER_RAMLAK`).
+- `filter_d::Real`: Filter scaling parameter (defaults to `1.0f0`).
+- `filter_parameter::Real`: Filter parameter for adjustable windows (defaults to `-1.0f0`).
+- `custom_filter`: Optional custom frequency-domain filter array.
+- `short_scan::Bool`: If `true`, applies Parker weighting for short-scan cone-beam geometries (defaults to `false`).
+- `voxel_supersampling::Integer`: Voxel supersampling rate along each dimension for backprojection (defaults to `1`).
 
 ## Iterative Algorithms
 

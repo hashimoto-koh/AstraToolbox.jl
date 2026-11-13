@@ -25,11 +25,11 @@ A more flexible "vector" geometry for parallel beams, where each projection can 
 
 This geometry defines a fan-beam setup with a flat detector.
 
-- `detector_width::Float32`: Width of a single detector pixel.
-- `source_origin::Float32`: Distance from the source to the origin.
-- `origin_detector::Float32`: Distance from the origin to the detector center.
 - `angles::Vector{Float32}`: The rotation angles (in radians).
-- `detector_count::Int32`: Number of detector pixels.
+- `detector_count::Integer`: Number of detector pixels.
+- `origin_source_distance::Real`: Distance from the origin to the X-ray source.
+- `origin_detector_distance::Real`: Distance from the origin to the detector center.
+- `detector_width::Real`: Width of a single detector pixel (defaults to `1.0f0`).
 
 ### `FanFlatVec2DGeometry`
 
